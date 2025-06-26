@@ -1,9 +1,5 @@
 
-import os
-import re
-import base64
-import asyncio
-import time
+import os, re, base64, asyncio, time
 from dotenv import load_dotenv
 from pyrogram import Client, filters, enums, idle
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
@@ -117,11 +113,11 @@ async def handle_start(client: Client, message: Message):
 
         link = msg.text
         link_button = InlineKeyboardButton(
-            "Click here for your link",
+            "your link",
             url=link if link.startswith("http") else f"https://t.me/{link.lstrip('@')}"
         )
         await message.reply(
-            "🔒 Here is your protected link:",
+            "🔒 protected link:",
             reply_markup=InlineKeyboardMarkup([[link_button]]),
             protect_content=True
         )
@@ -135,7 +131,7 @@ async def stats_command_handler(client: Client, message: Message):
     """A wrapper for the handle_stats function from tools.py."""
     await handle_stats(client, message, db, bot_start_time)
 
-@app.on_message(filters.private & filters.user(OWNER_ID) & ~filters.command("start"))
+@app.on_message(filters.private & filters.user(OWNER_ID) & ~filters.command)
 async def handle_owner_message(client: Client, message: Message):
     """Handles messages from the owner to generate new encoded links."""
     msg_id = 0
@@ -163,7 +159,7 @@ async def handle_owner_message(client: Client, message: Message):
     share_button = InlineKeyboardButton("🔁 Share URL", url=f"https://telegram.me/share/url?url={bot_link}")
     
     await message.reply(
-        f"✅ **Link Generated!**\n\n`{bot_link}`",
+        f"✅ **Link Generated!**\n\n{bot_link}",
         reply_markup=InlineKeyboardMarkup([[share_button]]),
         parse_mode=enums.ParseMode.MARKDOWN
     )
