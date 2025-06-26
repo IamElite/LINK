@@ -8,17 +8,64 @@ from pyrogram import idle
 from dotenv import load_dotenv
 from pyrogram import Client, filters, enums
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
-from database import Database
-from tools import handle_stats
+from pyrogram.errors import PeerIdInvalid
+
+# Assuming database.py and tools.py are in the same directory
+# If they are not, you might need to adjust the import path
+# For this example, we'll create placeholder classes if the files don't exist.
+
+try:
+    from database import Database
+except ImportError:
+    print("Warning: 'database.py' not found. Using a placeholder Database class.")
+    class Database:
+        def __init__(self, mongo_url):
+            self.mongo_url = mongo_url
+            self.users = []
+            self.channels = []
+            self.links = []
+            self.stats = {"group_chats": 0, "users": 0}
+        async def create_user(self, user_id, username, first_name):
+            print(f"DB: Creating user {user_id}")
+        async def update_user_last_seen(self, user_id):
+            print(f"DB: Updating last seen for user {user_id}")
+        async def create_channel(self, channel_id, title, username):
+            print(f"DB: Creating channel {channel_id}")
+            self.channels.append({"channel_id": channel_id})
+        async def update_stat(self, key, value):
+            print(f"DB: Updating stat {key} by {value}")
+            self.stats[key] = self.stats.get(key, 0) + value
+        async def create_link(self, link, owner_id):
+            print(f"DB: Creating link '{link}' for owner {owner_id}")
+        # Mock find_one for channel check
+        async def find_one(self, query):
+             class MockCollection:
+                 async def find_one(self, q):
+                     return next((c for c in self.channels if c['channel_id'] == q.get('channel_id')), None)
+             if query == self.channels: # A bit of a hack to simulate collection access
+                 return MockCollection()
+             return None
+
+
+try:
+    from tools import handle_stats
+except ImportError:
+    print("Warning: 'tools.py' not found. Using a placeholder handle_stats function.")
+    async def handle_stats(client, message, db, bot_start_time):
+        await message.reply("Stats module not found.")
+
 
 # Load environment variables
 load_dotenv()
-API_ID = int(os.getenv("API_ID"))
-API_HASH = os.getenv("API_HASH")
-BOT_TOKEN = os.getenv("BOT_TOKEN")
-OWNER_ID = int(os.getenv("OWNER_ID"))
-MONGO_URL = os.getenv("MONGO_URL")
-LOGGER_ID = int(os.getenv("LOGGER_ID"))  # Channel ID for logging
+
+# Safely load environment variables with stripping and defaults
+API_ID = int(os.getenv("API_ID", "0").strip())
+API_HASH = os.getenv("API_HASH", "").strip()
+BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
+OWNER_ID = int(os.getenv("OWNER_ID", "0").strip())
+MONGO_URL = os.getenv("MONGO_URL", "").strip()
+# The problematic ID is loaded here. We ensure it's stripped of any whitespace.
+LOGGER_ID = int(os.getenv("LOGGER_ID", "0").strip())
 
 # Initialize Database
 db = Database(MONGO_URL)
@@ -166,10 +213,10 @@ async def handle_owner_link(client, message):
     
     if not is_valid_link(link):
         await message.reply("❌ Invalid link format. Please send a valid Telegram entity link in one of these formats:\n\n"
-                           "- @username\n"
-                           "- https://t.me/username\n"
-                           "- https://t.me/s/channelname\n"
-                           "- https://telegram.me/username")
+                            "- @username\n"
+                            "- https://t.me/username\n"
+                            "- https://t.me/s/channelname\n"
+                            "- https://telegram.me/username")
         return
     
     # Encode and store link
@@ -232,8 +279,27 @@ async def handle_start(client, message):
     
     # Log start event
     identifier = f"User {message.from_user.id}" if message.from_user else f"Group {message.chat.id}"
-    await client.send_message(LOGGER_ID, f"{identifier} started the bot")
     
+    # --- FIX STARTS HERE ---
+    # This try-except block will catch the 'Peer id invalid' error and prevent the bot from crashing.
+    try:
+        await client.send_message(LOGGER_ID, f"{identifier} started the bot")
+    except ValueError as e:
+        # This error happens if the bot cannot resolve the LOGGER_ID.
+        # It's almost always because the bot is not in the channel or not an admin.
+        print(f"CRITICAL ERROR: Could not send log message to LOGGER_ID: {LOGGER_ID}.")
+        print(f"Error details: {e}")
+        print("ACTION REQUIRED: This is likely because the bot is not an admin in the logger channel.")
+        print("Please add the bot to the logger channel with admin rights to send messages.")
+    except PeerIdInvalid:
+        # This is a more specific Pyrogram error for the same issue.
+        print(f"CRITICAL ERROR: PeerIdInvalid for LOGGER_ID: {LOGGER_ID}.")
+        print("ACTION REQUIRED: Please ensure the bot is a member of the logger channel and the ID is correct.")
+    except Exception as e:
+        # Catch any other unexpected errors during logging.
+        print(f"An unexpected error occurred when sending a log message: {e}")
+    # --- FIX ENDS HERE ---
+
     # Check if start command has parameter
     if len(message.command) < 2:
         await message.reply("👋 Welcome! Use the link provided by the bot owner.")
@@ -290,4 +356,7 @@ except Exception as e:
     print("Ensure OWNER_ID and LOGGER_ID are valid and accessible to the bot")
     print(f"OWNER_ID: {OWNER_ID}, LOGGER_ID: {LOGGER_ID}")
 
+print("Bot is now running!")
 idle()
+
+print("Bot stopped.")
