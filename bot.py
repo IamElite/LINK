@@ -131,7 +131,7 @@ async def stats_command_handler(client: Client, message: Message):
     """A wrapper for the handle_stats function from tools.py."""
     await handle_stats(client, message, db, bot_start_time)
 
-@app.on_message(filters.private & filters.user(OWNER_ID) & ~filters.command)
+@app.on_message(filters.private & filters.user(OWNER_ID) & ~filters.command())
 async def handle_owner_message(client: Client, message: Message):
     """Handles messages from the owner to generate new encoded links."""
     msg_id = 0
