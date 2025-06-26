@@ -36,17 +36,6 @@ bot_start_time = time.time()
 app = Client("link_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 # --- Helper Functions ---
-def is_valid_link(link: str) -> bool:
-    """Check if the link is a valid Telegram entity using regex."""
-    patterns = [
-        r"^https?://t\.me/[a-zA-Z0-9_]+$",
-        r"^@[a-zA-Z0-9_]+$",
-        r"^https?://t\.me/s/[a-zA-Z0-9_]+$",
-        r"^https?://telegram\.me/[a-zA-Z0-9_]+$",
-        r"^https?://telegram\.dog/[a-zA-Z0-9_]+$"
-    ]
-    return any(re.match(pattern, link) for pattern in patterns)
-
 async def get_message_id(client: Client, message: Message) -> int:
     """Extract message ID from a forwarded message or a t.me link."""
     if message.forward_from_chat and message.forward_from_chat.id == LOGGER_ID:
@@ -108,8 +97,8 @@ async def handle_start(client: Client, message: Message):
         msg_id = await decode_encoded_string(encoded_str)
         msg = await client.get_messages(LOGGER_ID, msg_id)
         
-        if not msg.text or not is_valid_link(msg.text):
-            raise ValueError("Link is invalid or message has no text.")
+        if not msg.text:
+            raise ValueError("Message has no text.")
 
         link = msg.text
         link_button = InlineKeyboardButton(
@@ -141,16 +130,16 @@ async def handle_owner_message(client: Client, message: Message):
         if not msg_id:
             await message.reply("❌ Could not extract message ID. Please forward from the correct channel or send a valid message link.")
             return
-    # Case 2: Message is a valid entity like @username
-    elif message.text and is_valid_link(message.text):
+    # Case 2: Message is text
+    elif message.text:
         try:
             log_msg = await client.send_message(LOGGER_ID, message.text)
             msg_id = log_msg.id
         except Exception as e:
-            await message.reply(f"❌ Could not send link to logger channel: {e}")
+            await message.reply(f"❌ Could not save message to logger channel: {e}")
             return
     else:
-        await message.reply("❌ Invalid format. Please send a valid link (@username, t.me/...) or forward a message from the logger channel.")
+        await message.reply("❌ Invalid format. Please send text or forward a message from the logger channel.")
         return
         
     # Generate and send the encoded link
