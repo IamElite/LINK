@@ -277,28 +277,14 @@ async def handle_start(client, message):
 async def stats_handler(client, message):
     await handle_stats(client, message, db, bot_start_time)
 
-# Bot startup notification with error handling
+# Bot startup notification
 async def startup_notification():
-    """Send notification when bot starts, with retry logic"""
-    max_retries = 3
-    delay = 5  # seconds between retries
-    
-    for attempt in range(max_retries):
-        try:
-            # Verify bot has access to the logger channel
-            await app.get_chat(LOGGER_ID)
-            
-            # Send startup notification
-            await app.send_message(LOGGER_ID, "🤖 Bot started successfully!")
-            return
-        except Exception as e:
-            print(f"⚠️ Startup notification attempt {attempt+1}/{max_retries} failed: {str(e)}")
-            if attempt < max_retries - 1:
-                print(f"⚠️ Retrying in {delay} seconds...")
-                await asyncio.sleep(delay)
-            else:
-                print("❌ Failed to send startup notification after multiple attempts")
-                raise
+    """Send notification to owner when bot starts"""
+    try:
+        # Send startup notification directly to the owner
+        await app.send_message(OWNER_ID, "🤖 Bot started successfully!")
+    except Exception as e:
+        print(f"⚠️ Failed to send startup notification: {str(e)}")
 
 # Start the bot with notification
 print("Bot starting...")
