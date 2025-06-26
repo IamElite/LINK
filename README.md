@@ -11,7 +11,7 @@ A Telegram bot for generating and managing shareable links with MongoDB storage.
 ## Deployment
 
 ### Heroku
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/yourusername/your-repo-name)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/IamElite/LINK)
 
 1. Click the "Deploy to Heroku" button above
 2. Fill in the required environment variables:
