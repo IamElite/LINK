@@ -82,7 +82,7 @@ async def handle_start(client: Client, message: Message):
 
         content = msg.text
         content_button = InlineKeyboardButton(
-            "Your Link",
+            "Access Content",
             url=content if content.startswith("http") else f"https://t.me/{content.lstrip('@')}"
         )
         
@@ -126,10 +126,11 @@ async def owner_handler(client: Client, message: Message):
     # Generate shareable link
     encoded_string = generate_encoded_string(msg_id)
     bot_link = f"https://t.me/{app.me.username}?start={encoded_string}"
+    share_button = InlineKeyboardButton("🔁 Share URL", url=f"https://telegram.me/share/url?url={bot_link}")
     
     await message.reply(
         f"✅ **Secure Link Created!**\n\n"
-        f"Share this link: `{bot_link}`",
+        f"Share this link: {bot_link}",
         parse_mode=enums.ParseMode.MARKDOWN
     )
     
