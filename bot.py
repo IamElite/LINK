@@ -36,19 +36,6 @@ bot_start_time = time.time()
 app = Client("link_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
 # --- Helper Functions ---
-async def get_message_id(client: Client, message: Message) -> int:
-    """Extract message ID from a forwarded message or a t.me link."""
-    if message.forward_from_chat and message.forward_from_chat.id == LOGGER_ID:
-        return message.forward_from_message_id
-
-    if message.text:
-        # This pattern is simplified to find message ID from public/private channel links
-        pattern = r"https?://t\.me/(?:c/)?\w+/(\d+)"
-        match = re.search(pattern, message.text)
-        if match:
-            return int(match.group(1))
-            
-    return 0
 
 def generate_encoded_string(msg_id: int) -> str:
     """Generate a Base64 encoded string from a message ID and the logger ID."""
@@ -124,13 +111,11 @@ async def stats_command_handler(client: Client, message: Message):
 async def handle_owner_message(client: Client, message: Message):
     """Handles messages from the owner to generate new encoded links."""
     msg_id = 0
-    # Case 1: Message is forwarded or a direct Telegram link
-    if message.forward_from_chat or (message.text and "t.me/" in message.text):
-        msg_id = await get_message_id(client, message)
-        if not msg_id:
-            await message.reply("❌ Could not extract message ID. Please forward from the correct channel or send a valid message link.")
-            return
-    # Case 2: Message is text
+    # Case 1: Message is forwarded from logger channel
+    if message.forward_from_chat and message.forward_from_chat.id == LOGGER_ID:
+        msg_id = message.forward_from_message_id
+    
+    # Case 2: Message is any text (including links)
     elif message.text:
         try:
             log_msg = await client.send_message(LOGGER_ID, message.text)
@@ -138,6 +123,8 @@ async def handle_owner_message(client: Client, message: Message):
         except Exception as e:
             await message.reply(f"❌ Could not save message to logger channel: {e}")
             return
+    
+    # Invalid format
     else:
         await message.reply("❌ Invalid format. Please send text or forward a message from the logger channel.")
         return
