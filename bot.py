@@ -288,7 +288,4 @@ async def startup_notification():
 
 # Start the bot with notification
 print("Bot starting...")
-app.start()
-loop = asyncio.get_event_loop()
-loop.run_until_complete(startup_notification())
-app.run()
+app.run(on_startup=startup_notification)
