@@ -1,9 +1,11 @@
+
 import os, re, base64, asyncio, time
 from dotenv import load_dotenv
 from pyrogram import Client, filters, enums, idle
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
-from pyrogram.errors import PeerIdInvalid
+from pyrogram.errors import PeerIdInvalid, ChannelInvalid
 
+# --- Dependency Handling ---
 try:
     from database import Database
 except ImportError:
@@ -17,19 +19,22 @@ except ImportError:
     async def handle_stats(client, message, db, bot_start_time):
         await message.reply("Stats module is missing.")
 
+# --- Configuration ---
 load_dotenv()
 
-API_ID = int(os.getenv("API_ID", "0").strip())
-API_HASH = os.getenv("API_HASH", "").strip()
-BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
-OWNER_ID = int(os.getenv("OWNER_ID", "0").strip())
-MONGO_URL = os.getenv("MONGO_URL", "").strip()
-LOGGER_ID = int(os.getenv("LOGGER_ID", "0").strip()) 
+API_ID = int(os.getenv("API_ID", "0"))
+API_HASH = os.getenv("API_HASH", "")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+OWNER_ID = int(os.getenv("OWNER_ID", "0"))
+MONGO_URL = os.getenv("MONGO_URL", "")
+LOGGER_ID = int(os.getenv("LOGGER_ID", "0"))
 
+# --- Initialization ---
 db = Database(MONGO_URL)
 bot_start_time = time.time()
 app = Client("link_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
 
+# --- Helper Functions ---
 def generate_encoded_string(msg_id: int) -> str:
     raw_str = f"get-{msg_id * abs(LOGGER_ID)}"
     return base64.urlsafe_b64encode(raw_str.encode()).decode().rstrip("=")
@@ -41,107 +46,133 @@ async def decode_encoded_string(encoded_str: str) -> int:
     if not decoded_str.startswith("get-"):
         raise ValueError("Invalid encoded format.")
         
-    number = int(decoded_str.split("-")[1])
-    return number // abs(LOGGER_ID)
+    return int(decoded_str.split("-")[1]) // abs(LOGGER_ID)
 
+async def verify_logger_channel(client: Client):
+    """Verify bot's access to logger channel"""
+    try:
+        await client.send_chat_action(LOGGER_ID, "typing")
+        return True
+    except (PeerIdInvalid, ChannelInvalid):
+        return False
+
+# --- Command Handlers ---
 @app.on_message(filters.command("start"))
 async def handle_start(client: Client, message: Message):
     user_id = message.from_user.id
     
+    # Update user and group stats
     await db.create_user(user_id, message.from_user.username, message.from_user.first_name)
     await db.update_user_last_seen(user_id)
+    
     if message.chat.type != enums.ChatType.PRIVATE:
         await db.create_channel(message.chat.id, message.chat.title, message.chat.username)
 
-    identifier = f"User {user_id} (@{message.from_user.username or 'N/A'})" if message.from_user else f"Chat {message.chat.id} ({message.chat.title or 'N/A'})"
+    # Log start event
+    identifier = f"User {user_id}" if message.from_user else f"Chat {message.chat.id}"
     try:
-        await client.send_message(LOGGER_ID, f"Bot started by: {identifier} from chat {message.chat.id} (Type: {message.chat.type.name})")
-    except (ValueError, PeerIdInvalid) as e:
-        print(f"CRITICAL: Could not log to LOGGER_ID {LOGGER_ID}. Error: {e}. Please ensure the bot is an admin there and the ID is correct.")
-    
+        await client.send_message(LOGGER_ID, f"Bot started by: {identifier}")
+    except:
+        print(f"WARNING: Could not log to LOGGER_ID {LOGGER_ID}")
+
+    # Process start parameter
     if len(message.command) < 2:
-        await message.reply("👋 Welcome! Please use a link provided by the bot owner.")
+        await message.reply("👋 Welcome! Send me any link to store it securely.")
         return
 
-    encoded_str = re.sub(r'[^\w\-]', '', message.command[1])
     try:
+        encoded_str = re.sub(r'[^\w\-]', '', message.command[1])
         msg_id = await decode_encoded_string(encoded_str)
         msg = await client.get_messages(LOGGER_ID, msg_id)
         
         if not msg.text:
-            raise ValueError("Message has no text.")
+            raise ValueError("No content found")
 
-        link = msg.text
-        link_button = InlineKeyboardButton(
-            "Click here for your link",
-            url=link if link.startswith("http") else f"https://t.me/{link.lstrip('@')}"
+        content = msg.text
+        content_button = InlineKeyboardButton(
+            "Access Content",
+            url=content if content.startswith("http") else f"https://t.me/{content.lstrip('@')}"
         )
+        
         await message.reply(
-            "🔒 Protected link (Content protection enabled):\n",
-            reply_markup=InlineKeyboardMarkup([[link_button]]),
+            "🔒 Protected content:",
+            reply_markup=InlineKeyboardMarkup([[content_button]]),
             protect_content=True
         )
 
     except Exception as e:
-        print(f"Error processing start link: {e}")
+        print(f"Error: {e}")
         await message.reply("❌ This link is invalid or has expired.")
 
-@app.on_message(filters.command("stats") & filters.user(OWNER_ID))
-async def stats_command_handler(client: Client, message: Message):
+# Command handler without complex filters
+@app.on_message(filters.private & filters.command("stats") & filters.user(OWNER_ID))
+async def stats_handler(client: Client, message: Message):
     await handle_stats(client, message, db, bot_start_time)
 
-@app.on_message(filters.private & filters.user(OWNER_ID) & ~filters.command([]))
-async def handle_owner_message(client: Client, message: Message):
-    msg_id = 0
+# Simplified handler for owner messages
+@app.on_message(filters.private & filters.user(OWNER_ID))
+async def owner_handler(client: Client, message: Message):
+    # Skip if it's a command
+    if message.text and message.text.startswith('/'):
+        return
+    
+    # Handle forwarded messages
     if message.forward_from_chat and message.forward_from_chat.id == LOGGER_ID:
         msg_id = message.forward_from_message_id
-    
+    # Handle text messages
     elif message.text:
         try:
+            # Verify channel access
+            if not await verify_logger_channel(client):
+                await message.reply(
+                    "❌ I can't access the logger channel. Please check:\n"
+                    "1. Am I added to the channel?\n"
+                    "2. Is LOGGER_ID correct in .env?\n"
+                    "3. Do I have send message permission?"
+                )
+                return
+                
             log_msg = await client.send_message(LOGGER_ID, message.text)
             msg_id = log_msg.id
         except Exception as e:
-            await message.reply(f"❌ Could not save message to logger channel: {e}. Please check LOGGER_ID and bot's admin status in the channel.")
+            await message.reply(f"❌ Error saving content: {e}")
             return
-    
     else:
-        await message.reply("❌ Invalid format. Please send text or forward a message from the logger channel.")
+        await message.reply("❌ Please send text content or forward a message")
         return
-        
+
+    # Generate shareable link
     encoded_string = generate_encoded_string(msg_id)
     bot_link = f"https://t.me/{app.me.username}?start={encoded_string}"
-    share_button = InlineKeyboardButton("🔁 Share URL", url=f"https://telegram.me/share/url?url={bot_link}")
     
     await message.reply(
-        f"✅ **Link Generated!**\n\n`{bot_link}`",
-        reply_markup=InlineKeyboardMarkup([[share_button]]),
+        f"✅ **Secure Link Created!**\n\n"
+        f"Share this link: `{bot_link}`",
         parse_mode=enums.ParseMode.MARKDOWN
     )
-    if message.text:
-        original_link = message.text
-    else:
-        try:
-            original_link = (await client.get_messages(LOGGER_ID, msg_id)).text
-        except Exception as e:
-            print(f"WARNING: Could not fetch original link content from LOGGER_ID for saving: {e}")
-            original_link = "N/A"
+    
+    # Save to database
+    original_content = (await client.get_messages(LOGGER_ID, msg_id)).text
+    await db.create_link(original_content, message.from_user.id)
 
-    await db.create_link(original_link, message.from_user.id)
-
+# --- Main Execution ---
 if __name__ == "__main__":
-    print("Starting the bot...")
+    print("🚀 Starting bot...")
     app.start()
+    
+    # Verify logger channel on startup
+    if not asyncio.run(verify_logger_channel(app)):
+        print(f"❌ CRITICAL: Cannot access logger channel {LOGGER_ID}!")
+        try:
+            app.send_message(OWNER_ID, f"❌ Cannot access logger channel {LOGGER_ID}! Please fix configuration.")
+        except:
+            print("⚠️ Could not send error notification to owner")
+    
     try:
         app.send_message(OWNER_ID, "✅ Bot has started successfully!")
     except Exception as e:
-        print(f"⚠️ Could not send startup notification to OWNER_ID {OWNER_ID}: {e}. Please ensure OWNER_ID is correct and bot can send messages to them.")
+        print(f"⚠️ Startup notification failed: {e}")
     
-    # Add a specific check/reminder for LOGGER_ID
-    if LOGGER_ID == 0:
-        print("💡 REMINDER: LOGGER_ID is set to 0. Please update it in your .env file with the correct channel ID (e.g., -100xxxxxxxxxx) and ensure the bot is an admin with 'Send Messages' permission in that channel.")
-    else:
-        print(f"💡 LOGGER_ID is set to: {LOGGER_ID}. Please double-check if this is the correct channel ID and the bot has 'Send Messages' permission there if you face issues.")
-
-    print(f"🤖 Bot @{app.me.username} is now running!")
+    print(f"🤖 Bot @{app.me.username} is running!")
     idle()
-    print("Bot stopped.")
+    print("🛑 Bot stopped.")
