@@ -278,14 +278,19 @@ async def stats_handler(client, message):
     await handle_stats(client, message, db, bot_start_time)
 
 # Bot startup notification
+@app.on_start()
 async def startup_notification():
     """Send notification to owner when bot starts"""
     try:
-        # Send startup notification directly to the owner
+        # Resolve peer IDs to populate cache
+        await app.get_chat(OWNER_ID)
+        await app.get_chat(LOGGER_ID)
+        
+        # Send startup notification
         await app.send_message(OWNER_ID, "🤖 Bot started successfully!")
     except Exception as e:
         print(f"⚠️ Failed to send startup notification: {str(e)}")
 
-# Start the bot with notification
+# Start the bot
 print("Bot starting...")
 app.run()
