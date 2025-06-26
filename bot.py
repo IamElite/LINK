@@ -6,7 +6,7 @@ import time
 from datetime import datetime, timedelta
 from dotenv import load_dotenv
 from pyrogram import Client, filters, enums
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
 from database import Database
 from tools import handle_stats
 
