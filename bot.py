@@ -280,7 +280,8 @@ async def stats_handler(client, message):
 # Bot startup notification
 async def startup_notification():
     """Send notification when bot starts"""
-    await app.send_message(LOGGER_ID, "🤖 Bot started successfully!")
+    # Convert LOGGER_ID to string for Pyrogram compatibility
+    await app.send_message(str(LOGGER_ID), "🤖 Bot started successfully!")
 
 # Start the bot with notification
 print("Bot starting...")
