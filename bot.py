@@ -48,14 +48,6 @@ async def decode_encoded_string(encoded_str: str) -> int:
         
     return int(decoded_str.split("-")[1]) // abs(LOGGER_ID)
 
-async def verify_logger_channel(client: Client):
-    """Verify bot's access to logger channel"""
-    try:
-        await client.send_chat_action(LOGGER_ID, "typing")
-        return True
-    except (PeerIdInvalid, ChannelInvalid):
-        return False
-
 # --- Command Handlers ---
 @app.on_message(filters.command("start"))
 async def handle_start(client: Client, message: Message):
@@ -90,7 +82,7 @@ async def handle_start(client: Client, message: Message):
 
         content = msg.text
         content_button = InlineKeyboardButton(
-            "Access Content",
+            "Your Link",
             url=content if content.startswith("http") else f"https://t.me/{content.lstrip('@')}"
         )
         
@@ -122,16 +114,6 @@ async def owner_handler(client: Client, message: Message):
     # Handle text messages
     elif message.text:
         try:
-            # Verify channel access
-            if not await verify_logger_channel(client):
-                await message.reply(
-                    "❌ I can't access the logger channel. Please check:\n"
-                    "1. Am I added to the channel?\n"
-                    "2. Is LOGGER_ID correct in .env?\n"
-                    "3. Do I have send message permission?"
-                )
-                return
-                
             log_msg = await client.send_message(LOGGER_ID, message.text)
             msg_id = log_msg.id
         except Exception as e:
@@ -159,14 +141,6 @@ async def owner_handler(client: Client, message: Message):
 if __name__ == "__main__":
     print("🚀 Starting bot...")
     app.start()
-    
-    # Verify logger channel on startup
-    if not asyncio.run(verify_logger_channel(app)):
-        print(f"❌ CRITICAL: Cannot access logger channel {LOGGER_ID}!")
-        try:
-            app.send_message(OWNER_ID, f"❌ Cannot access logger channel {LOGGER_ID}! Please fix configuration.")
-        except:
-            print("⚠️ Could not send error notification to owner")
     
     try:
         app.send_message(OWNER_ID, "✅ Bot has started successfully!")
