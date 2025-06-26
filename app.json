@@ -1,38 +1,62 @@
 {
   "name": "Telegram Link Bot",
   "description": "A Telegram bot for generating and managing shareable links",
-  "repository": "https://github.com/yourusername/your-repo-name",
   "logo": "https://img.icons8.com/color/96/000000/telegram-app.png",
   "keywords": ["telegram", "bot", "python", "pyrogram"],
   "env": {
     "API_ID": {
       "description": "Your Telegram API ID from my.telegram.org",
-      "required": true
+      "required": true,
+      "value": "14050586"  
     },
     "API_HASH": {
       "description": "Your Telegram API Hash from my.telegram.org",
-      "required": true
+      "required": true,
+      "value": "42a60d9c657b106370c79bb0a8ac560c"  
     },
     "BOT_TOKEN": {
       "description": "Your Telegram bot token from @BotFather",
-      "required": true
+      "required": true,
+      "value": ""  
     },
     "OWNER_ID": {
       "description": "Your Telegram user ID (for bot admin)",
-      "required": true
+      "required": true,
+      "value": "7074383232"  
     },
     "MONGO_URL": {
       "description": "MongoDB connection URI",
-      "required": true
+      "required": true,
+      "value": "mongodb+srv://Hello:Hello@cluster0.pi9ks.mongodb.net/?retryWrites=true&w=majority"  
     },
     "LOGGER_ID": {
       "description": "Channel ID for logging (optional)",
-      "required": false
+      "required": false,
+      "value": "-1002536216907"  
+    },
+    "UPSTREAM_REPO": {
+      "description": "Upstream repository URL for updates",
+      "required": false,
+      "value": "https://github.com/IamElite/LINK"  
+    },
+    "UPSTREAM_BRANCH": {
+      "description": "Branch name for the repository",
+      "required": false,
+      "value": "main"  
     }
   },
-  "buildpacks": [
-    {
-      "url": "heroku/python"
+    "buildpacks": [
+        {
+            "url": "heroku/python"
+        },
+        {
+            "url": "https://github.com/jonathanong/heroku-buildpack-ffmpeg-latest.git"
+        }
+    ],
+    "formation": {
+        "worker": {
+            "quantity": "1",
+            "size": "Standard-2X"
+        }
     }
-  ]
 }
