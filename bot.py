@@ -288,4 +288,4 @@ async def startup_notification():
 
 # Start the bot with notification
 print("Bot starting...")
-app.run(on_startup=startup_notification)
+app.run()
