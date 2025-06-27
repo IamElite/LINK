@@ -31,46 +31,59 @@ async def handle_stats(client, message, db: Database, bot_start_time: float):
 async def handle_broadcast(client: Client, message: Message, db: Database):
     """Broadcast messages to all users"""
     if message.reply_to_message:
-        # Get all user IDs from database
-        query = await db.get_all_user_ids()
-        broadcast_msg = message.reply_to_message
-        total = 0
-        successful = 0
-        blocked = 0
-        deleted = 0
-        unsuccessful = 0
-        
-        pls_wait = await message.reply("<i>Broadcasting Message.. This will Take Some Time</i>")
-        for chat_id in query:
-            try:
-                await broadcast_msg.copy(chat_id)
-                successful += 1
-            except FloodWait as e:
-                await asyncio.sleep(e.x)
-                await broadcast_msg.copy(chat_id)
-                successful += 1
-            except UserIsBlocked:
-                # Remove blocked user from database
-                await db.delete_user(chat_id)
-                blocked += 1
-            except InputUserDeactivated:
-                # Remove deactivated user from database
-                await db.delete_user(chat_id)
-                deleted += 1
-            except Exception as e:
-                print(f"Broadcast error for {chat_id}: {e}")
-                unsuccessful += 1
-            total += 1
-        
-        status = f"""<b><u>Broadcast Completed</u>
+        try:
+            # Get all user IDs from database
+            query = await db.get_all_user_ids()
+            print(f"Broadcast: Found {len(query)} users in database")
+            
+            broadcast_msg = message.reply_to_message
+            total = 0
+            successful = 0
+            blocked = 0
+            deleted = 0
+            unsuccessful = 0
+            
+            pls_wait = await message.reply(f"<i>Broadcasting to {len(query)} users... This may take some time</i>")
+            
+            for chat_id in query:
+                try:
+                    await broadcast_msg.copy(chat_id)
+                    successful += 1
+                    print(f"Broadcast: Sent to {chat_id} successfully")
+                except FloodWait as e:
+                    await asyncio.sleep(e.x)
+                    await broadcast_msg.copy(chat_id)
+                    successful += 1
+                    print(f"Broadcast: Sent to {chat_id} after waiting {e.x} seconds")
+                except UserIsBlocked:
+                    # Remove blocked user from database
+                    await db.delete_user(chat_id)
+                    blocked += 1
+                    print(f"Broadcast: User blocked - {chat_id}")
+                except InputUserDeactivated:
+                    # Remove deactivated user from database
+                    await db.delete_user(chat_id)
+                    deleted += 1
+                    print(f"Broadcast: User deactivated - {chat_id}")
+                except Exception as e:
+                    unsuccessful += 1
+                    print(f"Broadcast error for {chat_id}: {type(e).__name__} - {str(e)}")
+                total += 1
+            
+            status = f"""<b><u>Broadcast Completed</u>
 
 Total Users: <code>{total}</code>
 Successful: <code>{successful}</code>
 Blocked Users: <code>{blocked}</code>
 Deleted Accounts: <code>{deleted}</code>
 Unsuccessful: <code>{unsuccessful}</code></b>"""
+            
+            return await pls_wait.edit(status)
         
-        return await pls_wait.edit(status)
+        except Exception as e:
+            error_msg = f"Broadcast failed: {type(e).__name__} - {str(e)}"
+            print(error_msg)
+            await message.reply(f"❌ {error_msg}")
 
     else:
         msg = await message.reply(REPLY_ERROR)
