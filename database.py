@@ -5,25 +5,38 @@ class Database:
     def __init__(self, mongo_url, db_name="link_bot"):
         self.client = motor.motor_asyncio.AsyncIOMotorClient(mongo_url)
         self.db = self.client[db_name]
-        self.users = self.db.users
+        self.user_data = self.db.users  # Using the simpler demo structure
         self.channels = self.db.channels
         self.links = self.db.links
         self.stats = self.db.stats
 
-    async def create_user(self, user_id, username, first_name):
+    async def present_user(self, user_id: int):
+        """Check if a user exists (demo-compatible)"""
+        found = await self.user_data.find_one({'_id': user_id})
+        return bool(found)
+
+    async def add_user(self, user_id: int, username=None, first_name=None):
+        """Add a user with minimal info (demo-compatible)"""
         user_data = {
-            "user_id": user_id,
-            "username": username,
-            "first_name": first_name,
-            "created_at": datetime.now(),
-            "last_seen": datetime.now()
+            '_id': user_id,
+            'created_at': datetime.now(),
+            'last_seen': datetime.now()
         }
-        await self.users.insert_one(user_data)
-        await self.update_stat("total_users", 1)
+        # Only add optional fields if provided
+        if username:
+            user_data['username'] = username
+        if first_name:
+            user_data['first_name'] = first_name
+        
+        result = await self.user_data.insert_one(user_data)
+        if result.inserted_id:
+            await self.update_stat("total_users", 1)
+        return result.inserted_id is not None
 
     async def update_user_last_seen(self, user_id):
-        await self.users.update_one(
-            {"user_id": user_id},
+        """Update last seen timestamp for a user"""
+        await self.user_data.update_one(
+            {"_id": user_id},
             {"$set": {"last_seen": datetime.now()}}
         )
 
@@ -70,3 +83,17 @@ class Database:
         async for stat in self.stats.find({}):
             stats[stat["type"]] = stat["count"]
         return stats
+
+    async def get_all_user_ids(self):
+        """Get all user IDs from the database (demo-compatible)"""
+        user_ids = []
+        async for doc in self.user_data.find():
+            user_ids.append(doc['_id'])
+        return user_ids
+
+    async def delete_user(self, user_id: int):
+        """Delete a user from the database (demo-compatible)"""
+        result = await self.user_data.delete_one({'_id': user_id})
+        if result.deleted_count:
+            await self.update_stat("total_users", -1)
+        return result.deleted_count > 0
