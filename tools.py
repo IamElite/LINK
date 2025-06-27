@@ -1,13 +1,12 @@
 import time, asyncio
 from datetime import timedelta
 from pyrogram import Client, enums, filters
-from pyrogram.types import Message, UpdateChatJoinRequest
+from pyrogram.types import Message, ChatJoinRequest
 from pyrogram.errors import FloodWait, InputUserDeactivated, UserIsBlocked
 from database import Database
 from collections import defaultdict
 import asyncio
 from pyrogram import enums
-from pyrogram.types import ChatJoinRequest
 from pyrogram.errors import ChannelInvalid, PeerIdInvalid, UserAlreadyParticipant
 
 REPLY_ERROR = "<b>Use this command as a reply to any message</b>"
@@ -31,19 +30,11 @@ async def delayed_approve(client: Client, join_request: ChatJoinRequest, delay: 
         if chat_id in pending_requests and user_id in pending_requests[chat_id]:
             del pending_requests[chat_id][user_id]
 
-async def handle_join_request(client: Client, update: UpdateChatJoinRequest):
-    """Handle both new and deleted join requests"""
-    chat_id = update.chat.id
-    user_id = update.from_user.id
+async def handle_join_request(client: Client, join_request: ChatJoinRequest):
+    """Handle new join requests with delayed approval"""
+    chat_id = join_request.chat.id
+    user_id = join_request.from_user.id
     
-    # For deleted join requests
-    if update.deleted:
-        if chat_id in pending_requests and user_id in pending_requests[chat_id]:
-            pending_requests[chat_id][user_id].cancel()
-            del pending_requests[chat_id][user_id]
-        return
-    
-    # For new join requests
     # Get delay setting
     if not hasattr(client, 'db'):
         print("Error: client has no db attribute")
@@ -52,18 +43,17 @@ async def handle_join_request(client: Client, update: UpdateChatJoinRequest):
     channel = await client.db.channels.find_one({"channel_id": chat_id})
     delay = channel.get("approve_delay", 180) if channel else 180
     
-    # Create a ChatJoinRequest object for approval
-    join_request = ChatJoinRequest(
-        chat=update.chat,
-        from_user=update.from_user,
-        date=update.date,
-        bio=update.bio,
-        invite_link=update.invite_link
-    )
-    
     # Schedule approval
     task = asyncio.create_task(delayed_approve(client, join_request, delay))
     pending_requests[chat_id][user_id] = task
+
+async def handle_deleted_request(client: Client, deleted_request: ChatJoinRequest):
+    """Handle canceled join requests"""
+    chat_id = deleted_request.chat.id
+    user_id = deleted_request.from_user.id
+    if chat_id in pending_requests and user_id in pending_requests[chat_id]:
+        pending_requests[chat_id][user_id].cancel()
+        del pending_requests[chat_id][user_id]
 
 async def set_approve_delay(client: Client, message: Message):
     """Set approval delay for join requests"""
