@@ -1,13 +1,13 @@
 import time, asyncio
 from datetime import timedelta
 from pyrogram import Client, enums, filters
-from pyrogram.types import Message
+from pyrogram.types import Message, UpdateChatJoinRequest
 from pyrogram.errors import FloodWait, InputUserDeactivated, UserIsBlocked
 from database import Database
 from collections import defaultdict
 import asyncio
 from pyrogram import enums
-from pyrogram.types import ChatJoinRequest, Message
+from pyrogram.types import ChatJoinRequest
 from pyrogram.errors import ChannelInvalid, PeerIdInvalid, UserAlreadyParticipant
 
 REPLY_ERROR = "<b>Use this command as a reply to any message</b>"
