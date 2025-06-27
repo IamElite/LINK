@@ -7,12 +7,6 @@ from database import Database
 
 REPLY_ERROR = "<b>Use this command as a reply to any message</b>"
 
-async def full_userbase():
-    return []  # Placeholder - implement in database.py
-
-async def del_user(user_id):
-    pass  # Placeholder - implement in database.py
-
 async def handle_stats(client, message, db: Database, bot_start_time: float):
     """Provide bot statistics to the owner"""
     # Calculate uptime
@@ -37,7 +31,8 @@ async def handle_stats(client, message, db: Database, bot_start_time: float):
 async def handle_broadcast(client: Client, message: Message, db: Database):
     """Broadcast messages to all users"""
     if message.reply_to_message:
-        query = await full_userbase()
+        # Get all user IDs from database
+        query = await db.get_all_user_ids()
         broadcast_msg = message.reply_to_message
         total = 0
         successful = 0
@@ -55,14 +50,16 @@ async def handle_broadcast(client: Client, message: Message, db: Database):
                 await broadcast_msg.copy(chat_id)
                 successful += 1
             except UserIsBlocked:
-                await del_user(chat_id)
+                # Remove blocked user from database
+                await db.delete_user(chat_id)
                 blocked += 1
             except InputUserDeactivated:
-                await del_user(chat_id)
+                # Remove deactivated user from database
+                await db.delete_user(chat_id)
                 deleted += 1
-            except:
+            except Exception as e:
+                print(f"Broadcast error for {chat_id}: {e}")
                 unsuccessful += 1
-                pass
             total += 1
         
         status = f"""<b><u>Broadcast Completed</u>
