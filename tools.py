@@ -5,7 +5,6 @@ from pyrogram.types import Message
 from pyrogram.errors import FloodWait, InputUserDeactivated, UserIsBlocked
 from database import Database
 from collections import defaultdict
-import asyncio
 from pyrogram import enums
 from pyrogram.types import ChatJoinRequest, Message
 from pyrogram.errors import ChannelInvalid, PeerIdInvalid, UserAlreadyParticipant
