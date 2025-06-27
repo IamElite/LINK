@@ -17,35 +17,33 @@ pending_requests = defaultdict(dict)
 
 async def delayed_approve(client: Client, join_request: ChatJoinRequest, delay: int):
     """Approve join request after specified delay"""
+    chat_id = join_request.chat.id
+    user_id = join_request.from_user.id
     try:
         await asyncio.sleep(delay)
         await join_request.approve()
-        
-        # Cleanup
-        chat_id = join_request.chat.id
-        user_id = join_request.from_user.id
-        if chat_id in pending_requests and user_id in pending_requests[chat_id]:
-            del pending_requests[chat_id][user_id]
-            
     except (ChannelInvalid, PeerIdInvalid, UserAlreadyParticipant):
         pass  # Handle errors silently
     except Exception as e:
         print(f"Error approving join request: {e}")
+    finally:
+        # Cleanup - remove from pending requests regardless of outcome
+        if chat_id in pending_requests and user_id in pending_requests[chat_id]:
+            del pending_requests[chat_id][user_id]
 
-async def handle_join_request(client: Client, join_request: ChatJoinRequest):
-    """Handle join requests (both new and deleted)"""
-    # For new join requests
-    chat_id = join_request.chat.id
-    user_id = join_request.from_user.id
+async def handle_join_request(client: Client, update: UpdateChatJoinRequest):
+    """Handle both new and deleted join requests"""
+    chat_id = update.chat.id
+    user_id = update.from_user.id
     
-    # Check if this is a deleted request
-    if join_request.deleted:
+    # For deleted join requests
+    if update.deleted:
         if chat_id in pending_requests and user_id in pending_requests[chat_id]:
             pending_requests[chat_id][user_id].cancel()
             del pending_requests[chat_id][user_id]
         return
     
-    # Handle new join request
+    # For new join requests
     # Get delay setting
     if not hasattr(client, 'db'):
         print("Error: client has no db attribute")
@@ -53,6 +51,15 @@ async def handle_join_request(client: Client, join_request: ChatJoinRequest):
     
     channel = await client.db.channels.find_one({"channel_id": chat_id})
     delay = channel.get("approve_delay", 180) if channel else 180
+    
+    # Create a ChatJoinRequest object for approval
+    join_request = ChatJoinRequest(
+        chat=update.chat,
+        from_user=update.from_user,
+        date=update.date,
+        bio=update.bio,
+        invite_link=update.invite_link
+    )
     
     # Schedule approval
     task = asyncio.create_task(delayed_approve(client, join_request, delay))
