@@ -1,7 +1,6 @@
-import time
-import asyncio
+import time, asyncio
 from datetime import timedelta
-from pyrogram import enums, filters
+from pyrogram import Client, enums, filters
 from pyrogram.types import Message
 from pyrogram.errors import FloodWait, InputUserDeactivated, UserIsBlocked
 from database import Database
