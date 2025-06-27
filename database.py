@@ -87,7 +87,7 @@ class Database:
     async def get_all_user_ids(self):
         """Get all user IDs from the database (demo-compatible)"""
         user_ids = []
-        async for doc in self.user_data.find():
+        async for doc in self.user_data.find({}, {'_id': 1}):
             user_ids.append(doc['_id'])
         return user_ids
 
