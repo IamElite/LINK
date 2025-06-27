@@ -65,8 +65,10 @@ async def handle_start(client: Client, message: Message):
     user_id = message.from_user.id
     
     # Update user and group stats
-    await db.create_user(user_id, message.from_user.username, message.from_user.first_name)
-    await db.update_user_last_seen(user_id)
+    if not await db.present_user(user_id):
+        await db.add_user(user_id, message.from_user.username, message.from_user.first_name)
+    else:
+        await db.update_user_last_seen(user_id)
     
     if message.chat.type != enums.ChatType.PRIVATE:
         await db.create_channel(message.chat.id, message.chat.title, message.chat.username)
