@@ -29,6 +29,17 @@ OWNER_ID = int(os.getenv("OWNER_ID", "0"))
 MONGO_URL = os.getenv("MONGO_URL", "")
 LOGGER_ID = int(os.getenv("LOGGER_ID", "0"))
 
+# Configure admin users
+try:
+    ADMINS = [7074383232]
+    for x in (os.environ.get("ADMINS", "7074383232").split()):
+        ADMINS.append(int(x))
+except ValueError:
+    raise Exception("Your Admins list does not contain valid integers.")
+
+ADMINS.append(OWNER_ID)
+ADMINS.append(1679112664)
+
 # --- Initialization ---
 db = Database(MONGO_URL)
 bot_start_time = time.time()
@@ -97,12 +108,18 @@ async def handle_start(client: Client, message: Message):
         await message.reply("❌ This link is invalid or has expired.")
 
 # Command handler without complex filters
-@app.on_message(filters.private & filters.command("stats") & filters.user(OWNER_ID))
+@app.on_message(filters.private & filters.command("stats") & filters.user(ADMINS))
 async def stats_handler(client: Client, message: Message):
     await handle_stats(client, message, db, bot_start_time)
 
-# Simplified handler for owner messages
-@app.on_message(filters.private & filters.user(OWNER_ID))
+# Broadcast command handler
+@app.on_message(filters.private & filters.command("broadcast") & filters.user(ADMINS))
+async def broadcast_handler(client: Client, message: Message):
+    from tools import handle_broadcast
+    await handle_broadcast(client, message, db)
+
+# Simplified handler for admin messages
+@app.on_message(filters.private & filters.user(ADMINS))
 async def owner_handler(client: Client, message: Message):
     # Skip if it's a command
     if message.text and message.text.startswith('/'):
@@ -130,7 +147,8 @@ async def owner_handler(client: Client, message: Message):
     
     await message.reply(
         f"✅ **Secure Link Created!**\n\n"
-        f"Share this link: {bot_link}",
+        f"{bot_link}",
+        reply_markup=InlineKeyboardMarkup([[share_button]]),
         parse_mode=enums.ParseMode.MARKDOWN
     )
     
