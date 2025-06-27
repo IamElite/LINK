@@ -159,13 +159,17 @@ async def owner_handler(client: Client, message: Message):
     original_content = (await client.get_messages(LOGGER_ID, msg_id)).text
     await db.create_link(original_content, message.from_user.id)
 
-from tools import handle_join_request, handle_deleted_request, set_approve_delay
-from pyrogram.handlers import ChatJoinRequestHandler, MessageHandler
+from tools import handle_join_request, set_approve_delay
 
-# Register join request handlers
-app.add_handler(ChatJoinRequestHandler(handle_join_request))
-app.add_handler(ChatJoinRequestHandler(handle_deleted_request, -1))  # -1 for deleted requests
-app.add_handler(MessageHandler(set_approve_delay, filters.command(["settime", "st"]) & filters.user(ADMINS)))
+# Register join request handler using decorator style
+@app.on_chat_join_request()
+async def join_request_handler(client: Client, join_request: ChatJoinRequest):
+    await handle_join_request(client, join_request)
+
+# Command handler for settime
+@app.on_message(filters.command(["settime", "st"]) & filters.user(ADMINS))
+async def set_delay_handler(client: Client, message: Message):
+    await set_approve_delay(client, message)
 
 
 # --- Main Execution ---
