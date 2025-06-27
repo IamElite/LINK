@@ -47,27 +47,43 @@ async def handle_broadcast(client: Client, message: Message, db: Database):
             
             for chat_id in query:
                 try:
-                    await broadcast_msg.copy(chat_id)
-                    successful += 1
-                    print(f"Broadcast: Sent to {chat_id} successfully")
+                    # Check if we can send messages to this user
+                    user_chat = await client.get_chat(chat_id)
+                    if user_chat.type == enums.ChatType.PRIVATE:
+                        await broadcast_msg.copy(chat_id)
+                        successful += 1
+                        print(f"Broadcast: Sent to {chat_id} successfully")
+                    else:
+                        # Skip non-private chats
+                        print(f"Broadcast: Skipping non-private chat {chat_id}")
+                        unsuccessful += 1
                 except FloodWait as e:
                     await asyncio.sleep(e.x)
                     await broadcast_msg.copy(chat_id)
                     successful += 1
                     print(f"Broadcast: Sent to {chat_id} after waiting {e.x} seconds")
-                except UserIsBlocked:
-                    # Remove blocked user from database
+                except (UserIsBlocked, InputUserDeactivated):
+                    # Remove blocked/deactivated users
                     await db.delete_user(chat_id)
-                    blocked += 1
-                    print(f"Broadcast: User blocked - {chat_id}")
-                except InputUserDeactivated:
-                    # Remove deactivated user from database
-                    await db.delete_user(chat_id)
-                    deleted += 1
-                    print(f"Broadcast: User deactivated - {chat_id}")
+                    if isinstance(e, UserIsBlocked):
+                        blocked += 1
+                        print(f"Broadcast: User blocked - {chat_id}")
+                    else:
+                        deleted += 1
+                        print(f"Broadcast: User deactivated - {chat_id}")
                 except Exception as e:
-                    unsuccessful += 1
-                    print(f"Broadcast error for {chat_id}: {type(e).__name__} - {str(e)}")
+                    # Handle other errors
+                    if "USER_IS_BLOCKED" in str(e):
+                        await db.delete_user(chat_id)
+                        blocked += 1
+                        print(f"Broadcast: User blocked - {chat_id}")
+                    elif "USER_DEACTIVATED" in str(e):
+                        await db.delete_user(chat_id)
+                        deleted += 1
+                        print(f"Broadcast: User deactivated - {chat_id}")
+                    else:
+                        unsuccessful += 1
+                        print(f"Broadcast error for {chat_id}: {type(e).__name__} - {str(e)}")
                 total += 1
             
             status = f"""<b><u>Broadcast Completed</u>
