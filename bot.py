@@ -1,9 +1,9 @@
-
 import os, re, base64, asyncio, time
 from dotenv import load_dotenv
 from pyrogram import Client, filters, enums, idle
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message
-from pyrogram.errors import PeerIdInvalid, ChannelInvalid
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ChatJoinRequest
+from pyrogram.errors import PeerIdInvalid, ChannelInvalid, UserAlreadyParticipant
+from collections import defaultdict
 
 # --- Dependency Handling ---
 try:
@@ -44,6 +44,7 @@ ADMINS.append(1679112664)
 db = Database(MONGO_URL)
 bot_start_time = time.time()
 app = Client("link_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
+app.db = db  # Attach db instance to app for use in tools functions
 
 # --- Helper Functions ---
 def generate_encoded_string(msg_id: int) -> str:
@@ -157,6 +158,15 @@ async def owner_handler(client: Client, message: Message):
     # Save to database
     original_content = (await client.get_messages(LOGGER_ID, msg_id)).text
     await db.create_link(original_content, message.from_user.id)
+
+# Import join request handlers from tools
+from tools import handle_join_request, handle_deleted_request, set_approve_delay
+
+# Register join request handlers
+app.on_chat_join_request()(handle_join_request)
+app.on_deleted_chat_join_request()(handle_deleted_request)
+app.on_message(filters.command(["settime", "st"]) & filters.user(ADMINS))(set_approve_delay)
+
 
 # --- Main Execution ---
 if __name__ == "__main__":
