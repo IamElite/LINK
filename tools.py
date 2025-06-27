@@ -5,6 +5,7 @@ from pyrogram.types import Message
 from pyrogram.errors import FloodWait, InputUserDeactivated, UserIsBlocked
 from database import Database
 from collections import defaultdict
+import asyncio
 from pyrogram import enums
 from pyrogram.types import ChatJoinRequest, Message
 from pyrogram.errors import ChannelInvalid, PeerIdInvalid, UserAlreadyParticipant
@@ -32,10 +33,19 @@ async def delayed_approve(client: Client, join_request: ChatJoinRequest, delay: 
         print(f"Error approving join request: {e}")
 
 async def handle_join_request(client: Client, join_request: ChatJoinRequest):
-    """Handle new join requests with delayed approval"""
+    """Handle join requests (both new and deleted)"""
+    # For new join requests
     chat_id = join_request.chat.id
     user_id = join_request.from_user.id
     
+    # Check if this is a deleted request
+    if join_request.deleted:
+        if chat_id in pending_requests and user_id in pending_requests[chat_id]:
+            pending_requests[chat_id][user_id].cancel()
+            del pending_requests[chat_id][user_id]
+        return
+    
+    # Handle new join request
     # Get delay setting
     if not hasattr(client, 'db'):
         print("Error: client has no db attribute")
@@ -47,14 +57,6 @@ async def handle_join_request(client: Client, join_request: ChatJoinRequest):
     # Schedule approval
     task = asyncio.create_task(delayed_approve(client, join_request, delay))
     pending_requests[chat_id][user_id] = task
-
-async def handle_deleted_request(client: Client, deleted_request: ChatJoinRequest):
-    """Handle canceled join requests"""
-    chat_id = deleted_request.chat.id
-    user_id = deleted_request.from_user.id
-    if chat_id in pending_requests and user_id in pending_requests[chat_id]:
-        pending_requests[chat_id][user_id].cancel()
-        del pending_requests[chat_id][user_id]
 
 async def set_approve_delay(client: Client, message: Message):
     """Set approval delay for join requests"""
@@ -97,8 +99,6 @@ def parse_time(time_str: str) -> int:
     else:
         return int(time_str)  # Assume seconds if no suffix
 
-
-
 async def handle_stats(client, message, db: Database, bot_start_time: float):
     """Provide bot statistics to the owner"""
     # Calculate uptime
@@ -119,8 +119,6 @@ async def handle_stats(client, message, db: Database, bot_start_time: float):
     )
     
     await message.reply(stats_message, parse_mode=enums.ParseMode.HTML)
-
-
 
 async def handle_broadcast(client: Client, message: Message, db: Database):
     """Broadcast messages to all users"""
