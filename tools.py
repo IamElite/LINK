@@ -166,7 +166,9 @@ async def reset_delay(client: Client, message: Message):
         except Exception as e:
             print(f"Error creating channel entry: {e}")
     
-    await client.db.set_approve_delay(target_chat_id, 180)
+    # Only update if current delay is different from default
+    if current_delay != 180:
+        await client.db.set_approve_delay(target_chat_id, 180)
     
     # Get chat title for response
     try:
@@ -182,11 +184,15 @@ async def reset_delay(client: Client, message: Message):
         minutes = seconds // 60
         return f"{minutes} minutes"
     
-    await message.reply(
-        f"✅ Join request delay for {chat_name} reset:\n"
-        f"Previous: {format_delay(current_delay)}\n"
-        f"New: 3 minutes"
-    )
+    # Show appropriate message based on whether value changed
+    if current_delay == 180:
+        await message.reply(f"✅ Join request delay for {chat_name} is already set to default (3 minutes)")
+    else:
+        await message.reply(
+            f"✅ Join request delay for {chat_name} reset:\n"
+            f"Previous: {format_delay(current_delay)}\n"
+            f"New: 3 minutes"
+        )
 
 def parse_time(time_str: str) -> int:
     """Convert time string to seconds (e.g., '30s' -> 30, '2m' -> 120)"""
