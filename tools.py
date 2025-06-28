@@ -18,9 +18,12 @@ async def delayed_approve(client: Client, chat_id: int, user_id: int, delay: int
     """Approve join request after specified delay"""
     try:
         await asyncio.sleep(delay)
-        await client.approve_chat_join_request(chat_id, user_id)
+        # Re-check if the user still has a pending request
+        if chat_id in pending_requests and user_id in pending_requests[chat_id]:
+            await client.approve_chat_join_request(chat_id, user_id)
+            print(f"Approved join request for user {user_id} in chat {chat_id} after {delay} seconds")
     except (ChannelInvalid, PeerIdInvalid, UserAlreadyParticipant):
-        pass  # Handle errors silently
+        pass  # Handle expected errors silently
     except Exception as e:
         print(f"Error approving join request: {e}")
     finally:
