@@ -14,13 +14,11 @@ REPLY_ERROR = "<b>Use this command as a reply to any message</b>"
 # Join request handling functions
 pending_requests = defaultdict(dict)
 
-async def delayed_approve(client: Client, join_request: ChatJoinRequest, delay: int):
+async def delayed_approve(client: Client, chat_id: int, user_id: int, delay: int):
     """Approve join request after specified delay"""
-    chat_id = join_request.chat.id
-    user_id = join_request.from_user.id
     try:
         await asyncio.sleep(delay)
-        await join_request.approve()
+        await client.approve_chat_join_request(chat_id, user_id)
     except (ChannelInvalid, PeerIdInvalid, UserAlreadyParticipant):
         pass  # Handle errors silently
     except Exception as e:
@@ -30,10 +28,10 @@ async def delayed_approve(client: Client, join_request: ChatJoinRequest, delay: 
         if chat_id in pending_requests and user_id in pending_requests[chat_id]:
             del pending_requests[chat_id][user_id]
 
-async def handle_join_request(client: Client, join_request: ChatJoinRequest):
+async def handle_join_request(client: Client, update):
     """Handle new join requests with delayed approval"""
-    chat_id = join_request.chat.id
-    user_id = join_request.from_user.id
+    chat_id = update.chat.id
+    user_id = update.from_user.id
     
     # Get delay setting
     if not hasattr(client, 'db'):
@@ -44,13 +42,13 @@ async def handle_join_request(client: Client, join_request: ChatJoinRequest):
     delay = channel.get("approve_delay", 180) if channel else 180
     
     # Schedule approval
-    task = asyncio.create_task(delayed_approve(client, join_request, delay))
+    task = asyncio.create_task(delayed_approve(client, chat_id, user_id, delay))
     pending_requests[chat_id][user_id] = task
 
-async def handle_deleted_request(client: Client, deleted_request: ChatJoinRequest):
+async def handle_deleted_request(client: Client, update):
     """Handle canceled join requests"""
-    chat_id = deleted_request.chat.id
-    user_id = deleted_request.from_user.id
+    chat_id = update.chat.id
+    user_id = update.from_user.id
     if chat_id in pending_requests and user_id in pending_requests[chat_id]:
         pending_requests[chat_id][user_id].cancel()
         del pending_requests[chat_id][user_id]
