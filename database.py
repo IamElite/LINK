@@ -41,13 +41,33 @@ class Database:
         )
 
     async def create_channel(self, channel_id, title, username):
-        channel_data = {
-            "channel_id": channel_id,
-            "title": title,
-            "username": username,
-            "created_at": datetime.now()
-        }
-        await self.channels.insert_one(channel_data)
+        """Create a new channel entry with detailed logging"""
+        try:
+            channel_data = {
+                "channel_id": channel_id,
+                "title": title,
+                "username": username,
+                "created_at": datetime.now(),
+                "approve_delay": 180  # Default 3 minutes
+            }
+            result = await self.channels.insert_one(channel_data)
+            print(f"Created channel {channel_id} in database")
+            return result
+        except Exception as e:
+            print(f"Error creating channel: {e}")
+            return None
+
+    async def set_approve_delay(self, channel_id: int, delay: int):
+        """Set approval delay for join requests in seconds"""
+        await self.channels.update_one(
+            {"channel_id": channel_id},
+            {"$set": {"approve_delay": delay}}
+        )
+
+    async def get_approve_delay(self, channel_id: int) -> int:
+        """Get approval delay for a channel"""
+        channel = await self.channels.find_one({"channel_id": channel_id})
+        return channel.get("approve_delay", 180) if channel else 180
 
     async def create_link(self, link, owner_id):
         link_data = {
