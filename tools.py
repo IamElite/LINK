@@ -54,17 +54,44 @@ async def handle_deleted_request(client: Client, update):
         del pending_requests[chat_id][user_id]
 
 async def set_approve_delay(client: Client, message: Message):
-    """Set approval delay for join requests"""
-    if message.chat.type not in (enums.ChatType.GROUP, enums.ChatType.SUPERGROUP, enums.ChatType.CHANNEL):
-        await message.reply("❌ This command can only be used in groups or channels")
+    """Set approval delay for join requests with flexible arguments"""
+    if message.chat.type not in (enums.ChatType.GROUP, enums.ChatType.SUPERGROUP, enums.ChatType.CHANNEL, enums.ChatType.PRIVATE):
+        await message.reply("❌ This command can only be used in groups, channels or private chats")
         return
     
-    if len(message.command) < 2:
-        await message.reply("Usage: /settime <time> (e.g., 30s, 2m, 1d)")
+    args = message.command[1:]
+    if not args:
+        await message.reply("Usage: /settime <time> (e.g., 30s, 2m, 1d)\nOr for channels: /settime <channel_id/link/username> <time>")
         return
+    
+    # Check if we're setting delay for a specific channel (private chat or channel specified)
+    target_chat_id = None
+    time_str = None
+    
+    if message.chat.type == enums.ChatType.PRIVATE:
+        if len(args) < 2:
+            await message.reply("Usage: /settime <channel_id/link/username> <time>")
+            return
+        target = args[0]
+        time_str = args[1]
+        
+        try:
+            # Try to resolve channel identifier
+            chat = await client.get_chat(target)
+            if chat.type not in (enums.ChatType.CHANNEL, enums.ChatType.SUPERGROUP):
+                await message.reply("❌ The specified chat is not a channel")
+                return
+            target_chat_id = chat.id
+        except Exception as e:
+            await message.reply(f"❌ Could not find channel: {e}")
+            return
+    else:
+        # In a group/channel, use current chat
+        target_chat_id = message.chat.id
+        time_str = args[0]
     
     try:
-        delay_seconds = parse_time(message.command[1])
+        delay_seconds = parse_time(time_str)
     except ValueError:
         await message.reply("❌ Invalid time format. Use formats like: 30s, 2m, 1d")
         return
@@ -74,11 +101,74 @@ async def set_approve_delay(client: Client, message: Message):
         await message.reply("❌ Database not initialized")
         return
     
-    if not await client.db.channels.find_one({"channel_id": message.chat.id}):
-        await client.db.create_channel(message.chat.id, message.chat.title, message.chat.username)
+    if not await client.db.channels.find_one({"channel_id": target_chat_id}):
+        try:
+            chat = await client.get_chat(target_chat_id)
+            await client.db.create_channel(target_chat_id, chat.title, chat.username)
+        except Exception as e:
+            print(f"Error creating channel entry: {e}")
     
-    await client.db.set_approve_delay(message.chat.id, delay_seconds)
-    await message.reply(f"✅ Join requests will now be accepted after {message.command[1]} delay")
+    await client.db.set_approve_delay(target_chat_id, delay_seconds)
+    
+    # Get chat title for response
+    try:
+        chat = await client.get_chat(target_chat_id)
+        chat_name = chat.title
+    except:
+        chat_name = f"ID {target_chat_id}"
+    
+    await message.reply(f"✅ Join requests for {chat_name} will now be accepted after {time_str} delay")
+
+async def reset_delay(client: Client, message: Message):
+    """Reset approval delay to default 3 minutes"""
+    if message.chat.type not in (enums.ChatType.GROUP, enums.ChatType.SUPERGROUP, enums.ChatType.CHANNEL, enums.ChatType.PRIVATE):
+        await message.reply("❌ This command can only be used in groups, channels or private chats")
+        return
+    
+    args = message.command[1:]
+    target_chat_id = None
+    
+    if message.chat.type == enums.ChatType.PRIVATE:
+        if not args:
+            await message.reply("Usage: /d <channel_id/link/username>")
+            return
+        target = args[0]
+        
+        try:
+            chat = await client.get_chat(target)
+            if chat.type not in (enums.ChatType.CHANNEL, enums.ChatType.SUPERGROUP):
+                await message.reply("❌ The specified chat is not a channel")
+                return
+            target_chat_id = chat.id
+        except Exception as e:
+            await message.reply(f"❌ Could not find channel: {e}")
+            return
+    else:
+        # In a group/channel, use current chat
+        target_chat_id = message.chat.id
+    
+    # Reset to default 3 minutes (180 seconds)
+    if not hasattr(client, 'db'):
+        await message.reply("❌ Database not initialized")
+        return
+    
+    if not await client.db.channels.find_one({"channel_id": target_chat_id}):
+        try:
+            chat = await client.get_chat(target_chat_id)
+            await client.db.create_channel(target_chat_id, chat.title, chat.username)
+        except Exception as e:
+            print(f"Error creating channel entry: {e}")
+    
+    await client.db.set_approve_delay(target_chat_id, 180)
+    
+    # Get chat title for response
+    try:
+        chat = await client.get_chat(target_chat_id)
+        chat_name = chat.title
+    except:
+        chat_name = f"ID {target_chat_id}"
+    
+    await message.reply(f"✅ Join request delay for {chat_name} reset to default (3 minutes)")
 
 def parse_time(time_str: str) -> int:
     """Convert time string to seconds (e.g., '30s' -> 30, '2m' -> 120)"""
