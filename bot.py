@@ -159,17 +159,17 @@ async def owner_handler(client: Client, message: Message):
     original_content = (await client.get_messages(LOGGER_ID, msg_id)).text
     await db.create_link(original_content, message.from_user.id)
 
-from tools import handle_join_request, handle_deleted_request, set_approve_delay
+from tools import handle_join_request, handle_deleted_request, set_approve_delay, reset_delay
 
 # Register join request handlers using Pyrogram's handler class
 from pyrogram.handlers import ChatJoinRequestHandler
 
 def join_request_callback(client: Client, update: ChatJoinRequest):
-    # Handle both new and deleted join requests
+    # Handle both new and deleted join requests using the client's event loop
     if hasattr(update, 'deleted') and update.deleted:
-        asyncio.create_task(handle_deleted_request(client, update))
+        client.loop.create_task(handle_deleted_request(client, update))
     else:
-        asyncio.create_task(handle_join_request(client, update))
+        client.loop.create_task(handle_join_request(client, update))
 
 app.add_handler(ChatJoinRequestHandler(join_request_callback))
 
@@ -177,6 +177,11 @@ app.add_handler(ChatJoinRequestHandler(join_request_callback))
 @app.on_message(filters.command(["settime", "st"]) & filters.user(ADMINS))
 async def set_delay_handler(client: Client, message: Message):
     await set_approve_delay(client, message)
+
+# Command handler for resetting delay
+@app.on_message(filters.command(["d", "default"]) & filters.user(ADMINS))
+async def reset_delay_handler(client: Client, message: Message):
+    await reset_delay(client, message)
 
 
 # --- Main Execution ---
