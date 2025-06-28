@@ -61,12 +61,8 @@ async def decode_encoded_string(encoded_str: str) -> int:
     return int(decoded_str.split("-")[1]) // abs(LOGGER_ID)
 
 # --- Command Handlers ---
-
-D = ["😘", "👾", "🤝", "👀", "❤️‍🔥", "💘", "😍", "😇", "🕊️", "🐳", "🎉", "🏆", "🗿", "⚡", "💯", "👌", "🍾"]
-
 @app.on_message(filters.command("start"))
 async def start_handler(client: Client, message: Message):
-    await message.react(random.choice(D))
     
     user_id = message.from_user.id
     
