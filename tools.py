@@ -147,6 +147,13 @@ async def reset_delay(client: Client, message: Message):
         # In a group/channel, use current chat
         target_chat_id = message.chat.id
     
+    # Get current delay before resetting
+    try:
+        channel = await client.db.channels.find_one({"channel_id": target_chat_id})
+        current_delay = channel.get("approve_delay", 180) if channel else 180
+    except:
+        current_delay = 180
+    
     # Reset to default 3 minutes (180 seconds)
     if not hasattr(client, 'db'):
         await message.reply("❌ Database not initialized")
@@ -168,7 +175,18 @@ async def reset_delay(client: Client, message: Message):
     except:
         chat_name = f"ID {target_chat_id}"
     
-    await message.reply(f"✅ Join request delay for {chat_name} reset to default (3 minutes)")
+    # Convert seconds to human-readable format
+    def format_delay(seconds):
+        if seconds < 60:
+            return f"{seconds} seconds"
+        minutes = seconds // 60
+        return f"{minutes} minutes"
+    
+    await message.reply(
+        f"✅ Join request delay for {chat_name} reset:\n"
+        f"Previous: {format_delay(current_delay)}\n"
+        f"New: 3 minutes"
+    )
 
 def parse_time(time_str: str) -> int:
     """Convert time string to seconds (e.g., '30s' -> 30, '2m' -> 120)"""
