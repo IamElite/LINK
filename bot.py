@@ -1,4 +1,4 @@
-import os, re, base64, asyncio, time
+import os, re, base64, asyncio, time, random
 from dotenv import load_dotenv
 from pyrogram import Client, filters, enums, idle
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ChatJoinRequest
@@ -61,8 +61,13 @@ async def decode_encoded_string(encoded_str: str) -> int:
     return int(decoded_str.split("-")[1]) // abs(LOGGER_ID)
 
 # --- Command Handlers ---
+
+D = ["😘", "👾", "🤝", "👀", "❤️‍🔥", "💘", "😍", "😇", "🕊️", "🐳", "🎉", "🏆", "🗿", "⚡", "💯", "👌", "🍾"]
+
 @app.on_message(filters.command("start"))
-async def handle_start(client: Client, message: Message):
+async def start_handler(client: Client, message: Message):
+    await message.react(random.choice(D))
+    
     user_id = message.from_user.id
     
     # Update user and group stats
@@ -109,6 +114,7 @@ async def handle_start(client: Client, message: Message):
     except Exception as e:
         print(f"Error: {e}")
         await message.reply("❌ This link is invalid or has expired.")
+
 
 # Command handler without complex filters
 @app.on_message(filters.private & filters.command("stats") & filters.user(ADMINS))
