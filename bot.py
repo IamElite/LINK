@@ -1,9 +1,12 @@
 import os, re, base64, asyncio, time, random
 from dotenv import load_dotenv
 from pyrogram import Client, filters, enums, idle
+from pyrogram.handlers import ChatJoinRequestHandler
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ChatJoinRequest
 from pyrogram.errors import PeerIdInvalid, ChannelInvalid, UserAlreadyParticipant
 from collections import defaultdict
+#from tools import handle_join_request, handle_deleted_request, set_approve_delay, reset_delay
+from tools import *
 
 # --- Dependency Handling ---
 try:
@@ -60,56 +63,65 @@ async def decode_encoded_string(encoded_str: str) -> int:
         
     return int(decoded_str.split("-")[1]) // abs(LOGGER_ID)
 
-# --- Command Handlers ---
+
 @app.on_message(filters.command("start"))
 async def start_handler(client: Client, message: Message):
-    
     user_id = message.from_user.id
-    
-    # Update user and group stats
+    mention = f"[{message.from_user.first_name}](tg://user?id={user_id})"
+
+    # 1. Start msg
+    if len(message.command) < 2:
+        if user_id in ADMINS:
+            welcome_text = (
+                f"👋 **Welcome, Admin {mention}!**\n\n"
+                "You can create secure links by sending me any text content."
+            )
+        else:
+            welcome_text = (
+                f"👋 **Welcome, {mention}!**\n\n"
+                "My Father - @DshDm_bot"
+            )
+        await message.reply(welcome_text, parse_mode=enums.ParseMode.MARKDOWN)
+    else:
+        # 2. Decode msg
+        try:
+            encoded_str = re.sub(r'[^\w\-]', '', message.command[1])
+            msg_id = await decode_encoded_string(encoded_str)
+            msg = await client.get_messages(LOGGER_ID, msg_id)
+            if not msg.text:
+                raise ValueError("No content found")
+            content = msg.text
+            content_button = InlineKeyboardButton(
+                "Your Link",
+                url=content if content.startswith("http") else f"https://t.me/{content.lstrip('@')}"
+            )
+            await message.reply(
+                f"🔓 **Content Unlocked!**",
+                reply_markup=InlineKeyboardMarkup([[content_button]]),
+                protect_content=True,
+                parse_mode=enums.ParseMode.MARKDOWN
+            )
+        except Exception as e:
+            print(f"Error: {e}")
+            await message.reply("❌ This link is invalid or has expired.")
+
+    # 3. Logger id msg (always log, after reply)
+    try:
+        await client.send_message(
+            LOGGER_ID,
+            f"Bot started by: {mention}",
+            parse_mode=enums.ParseMode.MARKDOWN
+        )
+    except Exception:
+        print(f"WARNING: Could not log to LOGGER_ID {LOGGER_ID}")
+
+    # Update user and group stats (after all)
     if not await db.present_user(user_id):
         await db.add_user(user_id, message.from_user.username, message.from_user.first_name)
     else:
         await db.update_user_last_seen(user_id)
-    
     if message.chat.type != enums.ChatType.PRIVATE:
-        await db.create_channel(message.chat.id, message.chat.title, message.chat.username)
-
-    # Log start event
-    identifier = f"User {user_id}" if message.from_user else f"Chat {message.chat.id}"
-    try:
-        await client.send_message(LOGGER_ID, f"Bot started by: {identifier}")
-    except:
-        print(f"WARNING: Could not log to LOGGER_ID {LOGGER_ID}")
-
-    # Process start parameter
-    if len(message.command) < 2:
-        await message.reply("👋 Welcome! Send me any link to store it securely.")
-        return
-
-    try:
-        encoded_str = re.sub(r'[^\w\-]', '', message.command[1])
-        msg_id = await decode_encoded_string(encoded_str)
-        msg = await client.get_messages(LOGGER_ID, msg_id)
-        
-        if not msg.text:
-            raise ValueError("No content found")
-
-        content = msg.text
-        content_button = InlineKeyboardButton(
-            "Access Content",
-            url=content if content.startswith("http") else f"https://t.me/{content.lstrip('@')}"
-        )
-        
-        await message.reply(
-            "🔒 Protected content:",
-            reply_markup=InlineKeyboardMarkup([[content_button]]),
-            protect_content=True
-        )
-
-    except Exception as e:
-        print(f"Error: {e}")
-        await message.reply("❌ This link is invalid or has expired.")
+        await db.create_channel(message.chat.id, message.chat.title, message.chat.username)# --- Command Handlers ---
 
 
 # Command handler without complex filters
@@ -122,6 +134,26 @@ async def stats_handler(client: Client, message: Message):
 async def broadcast_handler(client: Client, message: Message):
     from tools import handle_broadcast
     await handle_broadcast(client, message, db)
+
+def join_request_callback(client: Client, update: ChatJoinRequest):
+    # Handle both new and deleted join requests using the client's event loop
+    if hasattr(update, 'deleted') and update.deleted:
+        client.loop.create_task(handle_deleted_request(client, update))
+    else:
+        client.loop.create_task(handle_join_request(client, update))
+
+app.add_handler(ChatJoinRequestHandler(join_request_callback))
+
+# Command handler for settime
+@app.on_message(filters.command(["settime", "st"]) & filters.user(ADMINS))
+async def set_delay_handler(client: Client, message: Message):
+    await set_approve_delay(client, message)
+
+# Command handler for resetting delay
+@app.on_message(filters.command(["d", "default"]) & filters.user(ADMINS))
+async def reset_delay_handler(client: Client, message: Message):
+    await reset_delay(client, message)
+
 
 # Simplified handler for admin messages
 @app.on_message(filters.private & filters.user(ADMINS))
@@ -161,29 +193,6 @@ async def owner_handler(client: Client, message: Message):
     original_content = (await client.get_messages(LOGGER_ID, msg_id)).text
     await db.create_link(original_content, message.from_user.id)
 
-from tools import handle_join_request, handle_deleted_request, set_approve_delay, reset_delay
-
-# Register join request handlers using Pyrogram's handler class
-from pyrogram.handlers import ChatJoinRequestHandler
-
-def join_request_callback(client: Client, update: ChatJoinRequest):
-    # Handle both new and deleted join requests using the client's event loop
-    if hasattr(update, 'deleted') and update.deleted:
-        client.loop.create_task(handle_deleted_request(client, update))
-    else:
-        client.loop.create_task(handle_join_request(client, update))
-
-app.add_handler(ChatJoinRequestHandler(join_request_callback))
-
-# Command handler for settime
-@app.on_message(filters.command(["settime", "st"]) & filters.user(ADMINS))
-async def set_delay_handler(client: Client, message: Message):
-    await set_approve_delay(client, message)
-
-# Command handler for resetting delay
-@app.on_message(filters.command(["d", "default"]) & filters.user(ADMINS))
-async def reset_delay_handler(client: Client, message: Message):
-    await reset_delay(client, message)
 
 
 # --- Main Execution ---
