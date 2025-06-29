@@ -6,7 +6,8 @@ from pyrogram.handlers import ChatJoinRequestHandler
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ChatJoinRequest
 from pyrogram.errors import PeerIdInvalid, ChannelInvalid, UserAlreadyParticipant
 from collections import defaultdict
-from tools import *
+from tools import (handle_join_request, handle_deleted_request, 
+                   set_approve_delay, reset_delay, handle_stats, handle_broadcast)
 
 # --- Dependency Handling ---
 try:
@@ -19,8 +20,8 @@ except ImportError:
 # --- Configuration ---
 load_dotenv()
 
-API_ID = int(os.getenv("API_ID", "42a60d9c657b106370c79bb0a8ac560c"))
-API_HASH = os.getenv("API_HASH", "14050586")
+API_ID = int(os.getenv("API_ID", "14050586"))
+API_HASH = os.getenv("API_HASH", "2a60d9c657b106370c79bb0a8ac560c")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 OWNER_ID = int(os.getenv("OWNER_ID", "7074383232"))
 MONGO_URL = os.getenv("MONGO_URL", "mongodb+srv://ar:durgesh@ar.yqov3el.mongodb.net/?retryWrites=true&w=majority")
