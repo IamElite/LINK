@@ -89,15 +89,17 @@ async def start_handler(client: Client, message: Message):
                 "Your Link",
                 url=content if content.startswith("http") else f"https://t.me/{content.lstrip('@')}"
             )
-            await message.reply(
+            aa = await message.reply(
                 f"🔓 **Content Unlocked!**",
                 reply_markup=InlineKeyboardMarkup([[content_button]]),
                 protect_content=True,
                 disable_notification=True,
                 disable_web_page_preview=True,
-                delete_after=180,
                 parse_mode=enums.ParseMode.MARKDOWN
             )
+            await asyncio.sleep(180)
+            await aa.delete()
+            
         except Exception as e:
             print(f"Error: {e}")
             await message.reply("❌ This link is invalid or has expired.")
