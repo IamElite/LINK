@@ -81,12 +81,12 @@ async def start_handler(client: Client, message: Message):
     if len(message.command) < 2:
         if user_id in ADMINS:
             welcome_text = (
-                f"👋 **Welcome, Admin {mention}!**\n\n"
+                f"\ud83d\udc4b **Welcome, Admin {mention}!**\n\n"
                 "You can create secure links by sending me any text content."
             )
         else:
             welcome_text = (
-                f"👋 **Welcome, {mention}!**\n\n"
+                f"\ud83d\udc4b **Welcome, {mention}!**\n\n"
                 "My Father - @DshDm_bot"
             )
         await message.reply(welcome_text, parse_mode=enums.ParseMode.MARKDOWN)
@@ -104,38 +104,24 @@ async def start_handler(client: Client, message: Message):
                 url=content if content.startswith("http") else f"https://t.me/{content.lstrip('@')}"
             )
             await message.reply(
-                f"🔓 **Content Unlocked!**",
+                f"\ud83d\udd13 **Content Unlocked!**",
                 reply_markup=InlineKeyboardMarkup([[content_button]]),
                 protect_content=True,
                 parse_mode=enums.ParseMode.MARKDOWN
             )
         except Exception as e:
             print(f"Error: {e}")
-            await message.reply("❌ This link is invalid or has expired.")
+            await message.reply("\u274c This link is invalid or has expired.")
 
     # 3. Logger id msg (always log, after reply)
     try:
-        # Ensure bot is in channel before sending message
-        try:
-            await client.get_chat_member(LOGGER_ID, "me")
-        except UserNotParticipant:
-            await client.join_chat(LOGGER_ID)
-            print(f"Joined logger channel: {LOGGER_ID}")
-            
         await client.send_message(
             LOGGER_ID,
             f"Bot started by: {mention}",
             parse_mode=enums.ParseMode.MARKDOWN
         )
-    except Exception as e:
-        print(f"ERROR: Could not log to LOGGER_ID {LOGGER_ID}: {e}")
-        # Add detailed error information
-        if "USER_NOT_PARTICIPANT" in str(e):
-            print("Bot is not a member of the logger channel. Please add the bot to the channel.")
-        elif "CHAT_WRITE_FORBIDDEN" in str(e):
-            print("Bot lacks permission to post messages in the logger channel. Please grant 'Post Messages' permission.")
-        elif "PEER_ID_INVALID" in str(e):
-            print("Invalid channel ID. Please verify LOGGER_ID environment variable.")
+    except Exception:
+        print(f"WARNING: Could not log to LOGGER_ID {LOGGER_ID}")
 
     # Update user and group stats (after all)
     if not await db.present_user(user_id):
@@ -190,37 +176,22 @@ async def owner_handler(client: Client, message: Message):
     # Handle text messages
     elif message.text:
         try:
-            # Ensure bot is in channel before sending message
-            try:
-                await client.get_chat_member(LOGGER_ID, "me")
-            except UserNotParticipant:
-                await client.join_chat(LOGGER_ID)
-                print(f"Joined logger channel: {LOGGER_ID}")
-                
             log_msg = await client.send_message(LOGGER_ID, message.text)
             msg_id = log_msg.id
         except Exception as e:
-            error_msg = f"❌ Error saving content: {e}"
-            if "USER_NOT_PARTICIPANT" in str(e):
-                error_msg += "\n\nBot is not a member of the logger channel. Please add the bot to the channel."
-            elif "CHAT_WRITE_FORBIDDEN" in str(e):
-                error_msg += "\n\nBot lacks permission to post messages. Please grant 'Post Messages' permission in the channel."
-            elif "PEER_ID_INVALID" in str(e):
-                error_msg += "\n\nInvalid channel ID. Please verify LOGGER_ID environment variable."
-                
-            await message.reply(error_msg)
+            await message.reply(f"\u274c Error saving content: {e}")
             return
     else:
-        await message.reply("❌ Please send text content or forward a message")
+        await message.reply("\u274c Please send text content or forward a message")
         return
 
     # Generate shareable link
     encoded_string = generate_encoded_string(msg_id)
     bot_link = f"https://t.me/{app.me.username}?start={encoded_string}"
-    share_button = InlineKeyboardButton("🔁 Share URL", url=f"https://telegram.me/share/url?url={bot_link}")
+    share_button = InlineKeyboardButton("\ud83d\udd01 Share URL", url=f"https://telegram.me/share/url?url={bot_link}")
     
     await message.reply(
-        f"✅ **Secure Link Created!**\n\n"
+        f"\u2705 **Secure Link Created!**\n\n"
         f"{bot_link}",
         reply_markup=InlineKeyboardMarkup([[share_button]]),
         parse_mode=enums.ParseMode.MARKDOWN
@@ -244,12 +215,12 @@ async def start_web_server():
     await runner.setup()
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
-    print(f"🌐 Web server running on port {port}")
+    print(f"\ud83c\udf10 Web server running on port {port}")
     return site
 
 # --- Main Execution ---
 if __name__ == "__main__":
-    print("🚀 Starting bot...")
+    print("\ud83d\ude80 Starting bot...")
     app.start()
     
     # Start web server in background
@@ -260,7 +231,7 @@ if __name__ == "__main__":
     try:
         logger_chat = app.get_chat(LOGGER_ID)
         if logger_chat.type not in (enums.ChatType.CHANNEL, enums.ChatType.SUPERGROUP):
-            print(f"❌ LOGGER_ID {LOGGER_ID} is not a channel/supergroup")
+            print(f"\u274c LOGGER_ID {LOGGER_ID} is not a channel/supergroup")
             exit(1)
         
         # Check admin privileges and posting permissions
@@ -269,26 +240,26 @@ if __name__ == "__main__":
         bot_admin = next((admin for admin in admins if admin.user.id == bot_me.id), None)
         
         if not bot_admin:
-            print(f"❌ Bot is not admin in logger channel {LOGGER_ID}")
+            print(f"\u274c Bot is not admin in logger channel {LOGGER_ID}")
             print("Please make the bot an admin and restart")
             exit(1)
             
         # Check specific permission to post messages
         if not bot_admin.can_post_messages:
-            print(f"❌ Bot lacks permission to post messages in logger channel {LOGGER_ID}")
+            print(f"\u274c Bot lacks permission to post messages in logger channel {LOGGER_ID}")
             print("Please grant 'Post Messages' permission and restart")
             exit(1)
         
-        print(f"✅ Logger channel validated: {logger_chat.title} (ID: {LOGGER_ID})")
+        print(f"\u2705 Logger channel validated: {logger_chat.title} (ID: {LOGGER_ID})")
 
         try:
-            app.send_message(OWNER_ID, "✅ Bot has started successfully!")
+            app.send_message(OWNER_ID, "\u2705 Bot has started successfully!")
         except Exception as e:
-            print(f"⚠️ Startup notification failed: {e}")
+            print(f"\u26a0\ufe0f Startup notification failed: {e}")
         
-        print(f"🤖 Bot @{app.me.username} is running!")
+        print(f"\ud83e\udd16 Bot @{app.me.username} is running!")
         idle()
-        print("🛑 Bot stopped.")
+        print("\ud83d\udd1d Bot stopped.")
     except Exception as e:
         print(f"FATAL: Failed to validate logger channel: {e}")
         exit(1)
