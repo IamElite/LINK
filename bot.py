@@ -4,10 +4,9 @@ from aiohttp import web
 from pyrogram import Client, filters, enums, idle
 from pyrogram.handlers import ChatJoinRequestHandler
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ChatJoinRequest
-from pyrogram.errors import PeerIdInvalid, ChannelInvalid, UserAlreadyParticipant, ConnectionError
+from pyrogram.errors import PeerIdInvalid, ChannelInvalid, UserAlreadyParticipant
 from collections import defaultdict
-from tools import (handle_join_request, handle_deleted_request, 
-                   set_approve_delay, reset_delay, handle_stats, handle_broadcast)
+from tools import *
 
 # --- Dependency Handling ---
 try:
@@ -193,11 +192,11 @@ async def owner_handler(client: Client, message: Message):
 async def run_web_server():
     """Starts a web server for Koyeb health checks."""
     web_app = web.Application()
-    async def health_check(request):
+    async def health_check(_):
         try:
             # Check if client is connected before accessing attributes
             bot_username = app.me.username if app.is_connected else "Bot (connecting...)"
-        except (AttributeError, ConnectionError):
+        except AttributeError:
             bot_username = "Bot (initializing...)"
         return web.Response(text=f"Bot @{bot_username} is alive!")
 
