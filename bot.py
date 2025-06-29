@@ -1,6 +1,8 @@
-import os, re, base64, asyncio, time, random
+import os, re, base64, asyncio, time, random, sys
 from dotenv import load_dotenv
 from pyrogram import Client, filters, enums, idle
+import aiohttp
+from aiohttp import web
 from pyrogram.handlers import ChatJoinRequestHandler
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ChatJoinRequest
 from pyrogram.errors import PeerIdInvalid, ChannelInvalid, UserAlreadyParticipant
@@ -201,10 +203,29 @@ async def owner_handler(client: Client, message: Message):
 
 
 
+# Web server for Koyeb health checks
+async def handle_health_check(request):
+    return web.Response(text="Bot is running")
+
+async def start_web_server():
+    app_web = web.Application()
+    app_web.router.add_get("/", handle_health_check)
+    port = int(os.getenv("PORT", 8080))
+    runner = web.AppRunner(app_web)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    print(f"🌐 Web server running on port {port}")
+    return site
+
 # --- Main Execution ---
 if __name__ == "__main__":
     print("🚀 Starting bot...")
     app.start()
+    
+    # Start web server in background
+    loop = asyncio.get_event_loop()
+    web_task = loop.create_task(start_web_server())
 
     # Validate logger channel and permissions
     try:
