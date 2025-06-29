@@ -93,10 +93,8 @@ async def start_handler(client: Client, message: Message):
                 f"🔓 **Content Unlocked!**",
                 reply_markup=InlineKeyboardMarkup([[content_button]]),
                 protect_content=True,
-                no_webpage=True,
                 disable_notification=True,
                 disable_web_page_preview=True,
-                allow_sending_without_reply=False,
                 delete_after=180,
                 parse_mode=enums.ParseMode.MARKDOWN
             )
