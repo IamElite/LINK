@@ -220,46 +220,47 @@ async def start_web_server():
 
 # --- Main Execution ---
 if __name__ == "__main__":
-    print("\ud83d\ude80 Starting bot...")
-    app.start()
-    
-    # Start web server in background
-    loop = asyncio.get_event_loop()
-    web_task = loop.create_task(start_web_server())
+    print("🚀 Starting bot...")
 
-    # Validate logger channel and permissions
-    try:
-        logger_chat = app.get_chat(LOGGER_ID)
-        if logger_chat.type not in (enums.ChatType.CHANNEL, enums.ChatType.SUPERGROUP):
-            print(f"\u274c LOGGER_ID {LOGGER_ID} is not a channel/supergroup")
-            exit(1)
-        
-        # Check admin privileges and posting permissions
-        bot_me = app.get_me()
-        admins = app.get_chat_members(LOGGER_ID, filter=enums.ChatMembersFilter.ADMINISTRATORS)
-        bot_admin = next((admin for admin in admins if admin.user.id == bot_me.id), None)
-        
-        if not bot_admin:
-            print(f"\u274c Bot is not admin in logger channel {LOGGER_ID}")
-            print("Please make the bot an admin and restart")
-            exit(1)
-            
-        # Check specific permission to post messages
-        if not bot_admin.can_post_messages:
-            print(f"\u274c Bot lacks permission to post messages in logger channel {LOGGER_ID}")
-            print("Please grant 'Post Messages' permission and restart")
-            exit(1)
-        
-        print(f"\u2705 Logger channel validated: {logger_chat.title} (ID: {LOGGER_ID})")
+    async def main():
+        await app.start()
 
+        # Start web server
+        loop = asyncio.get_event_loop()
+        loop.create_task(start_web_server())
+
+        # Validate logger channel and permissions
         try:
-            app.send_message(OWNER_ID, "\u2705 Bot has started successfully!")
+            logger_chat = await app.get_chat(LOGGER_ID)
+            if logger_chat.type not in (enums.ChatType.CHANNEL, enums.ChatType.SUPERGROUP):
+                print(f"❌ LOGGER_ID {LOGGER_ID} is not a channel/supergroup")
+                exit(1)
+
+            # Check admin privileges and posting permissions
+            bot_me = await app.get_me()
+            admins = await app.get_chat_members(LOGGER_ID, filter=enums.ChatMembersFilter.ADMINISTRATORS)
+            bot_admin = next((admin for admin in admins if admin.user.id == bot_me.id), None)
+
+            if not bot_admin:
+                print(f"❌ Bot is not admin in logger channel {LOGGER_ID}")
+                exit(1)
+
+            if not bot_admin.can_post_messages:
+                print(f"❌ Bot lacks permission to post messages in logger channel {LOGGER_ID}")
+                exit(1)
+
+            print(f"✅ Logger channel validated: {logger_chat.title} (ID: {LOGGER_ID})")
+
+            try:
+                await app.send_message(OWNER_ID, "✅ Bot has started successfully!")
+            except Exception as e:
+                print(f"⚠️ Startup notification failed: {e}")
+
+            print(f"🤖 Bot @{app.me.username} is running!")
+            await idle()
+            print("🛑 Bot stopped.")
         except Exception as e:
-            print(f"\u26a0\ufe0f Startup notification failed: {e}")
-        
-        print(f"\ud83e\udd16 Bot @{app.me.username} is running!")
-        idle()
-        print("\ud83d\udd1d Bot stopped.")
-    except Exception as e:
-        print(f"FATAL: Failed to validate logger channel: {e}")
-        exit(1)
+            print(f"FATAL: Failed to validate logger channel: {e}")
+            exit(1)
+
+    asyncio.run(main())
