@@ -1,29 +1,16 @@
-import os, re, base64, asyncio, time, random, sys
+import os, re, base64, asyncio, time, random, sys, logging, threading
 from dotenv import load_dotenv
 from pyrogram import Client, filters, enums, idle
-import aiohttp
-from aiohttp import web
 from pyrogram.handlers import ChatJoinRequestHandler
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ChatJoinRequest
 from pyrogram.errors import PeerIdInvalid, ChannelInvalid, UserAlreadyParticipant
-from collections import defaultdict
-from tools import *
+from flask import Flask
 
-# --- Dependency Handling ---
-try:
-    from database import Database
-except ImportError:
-    print("FATAL: 'database.py' not found. Please ensure it exists.")
-    exit()
+# --- Logging Setup ---
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-try:
-    from tools import handle_stats
-except ImportError:
-    print("WARNING: 'tools.py' not found. The /stats command will not work.")
-    async def handle_stats(client, message, db, bot_start_time):
-        await message.reply("Stats module is missing.")
-
-# --- Configuration ---
+# --- Environment Variables ---
 load_dotenv()
 
 API_ID = int(os.getenv("API_ID", "0"))
@@ -32,28 +19,42 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 OWNER_ID = int(os.getenv("OWNER_ID", "0"))
 MONGO_URL = os.getenv("MONGO_URL", "")
 LOGGER_ID = int(os.getenv("LOGGER_ID", "0"))
+
+# Validate LOGGER_ID
 if LOGGER_ID == 0:
-    print("FATAL: LOGGER_ID environment variable is not set.")
+    logger.error("FATAL: LOGGER_ID environment variable is not set.")
     exit(1)
 if LOGGER_ID > 0:
     LOGGER_ID = -LOGGER_ID
 
-# Configure admin users
+# Load ADMINS
+ADMINS = [int(admin) for admin in os.getenv("ADMINS", "").split()] + [OWNER_ID, 1679112664]
+
+# --- Bot Initialization ---
 try:
-    ADMINS = [7074383232]
-    for x in (os.environ.get("ADMINS", "7074383232").split()):
-        ADMINS.append(int(x))
-except ValueError:
-    raise Exception("Your Admins list does not contain valid integers.")
+    from database import Database
+    db = Database(MONGO_URL)
+except ImportError:
+    logger.error("FATAL: 'database.py' not found.")
+    exit(1)
 
-ADMINS.append(OWNER_ID)
-ADMINS.append(1679112664)
-
-# --- Initialization ---
-db = Database(MONGO_URL)
-bot_start_time = time.time()
 app = Client("link_bot", api_id=API_ID, api_hash=API_HASH, bot_token=BOT_TOKEN)
-app.db = db  # Attach db instance to app for use in tools functions
+app.db = db
+bot_start_time = time.time()
+
+# --- Flask Server for Health Check ---
+flask_app = Flask(__name__)
+
+@flask_app.route('/')
+@flask_app.route('/health')
+def home():
+    logger.info("Health check accessed")
+    return "Bot is running"
+
+def run_flask():
+    port = int(os.getenv("PORT", 8000))
+    logger.info(f"Starting Flask server on port {port}")
+    flask_app.run(host="0.0.0.0", port=port)
 
 # --- Helper Functions ---
 def generate_encoded_string(msg_id: int) -> str:
@@ -67,30 +68,14 @@ async def decode_encoded_string(encoded_str: str) -> int:
         raise ValueError("Invalid encoded format.")
     return int(decoded_str.split("-")[1]) // abs(LOGGER_ID)
 
-# --- Logging ---
-import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# --- Web Server ---
-async def handle_health_check(request):
-    logger.info("Health check accessed")
-    return web.Response(text="Bot is running")
-
-def run_web_server():
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    app_web = web.Application()
-    app_web.router.add_get("/", handle_health_check)
-    app_web.router.add_get("/health", handle_health_check)
-    port = int(os.getenv("PORT", 8080))
-    print(f"Starting web server on port {port}")
-    runner = web.AppRunner(app_web)
-    loop.run_until_complete(runner.setup())
-    site = web.TCPSite(runner, "0.0.0.0", port)
-    loop.run_until_complete(site.start())
-    print(f"🌐 Web server running on port {port}")
-    loop.run_forever()
+# --- LOGGER_ID Validation ---
+async def is_logger_id_valid(client: Client):
+    try:
+        await client.get_chat(LOGGER_ID)
+        return True
+    except (PeerIdInvalid, ChannelInvalid):
+        logger.error(f"Invalid LOGGER_ID: {LOGGER_ID}")
+        return False
 
 # --- Command Handlers ---
 @app.on_message(filters.command("start"))
@@ -98,16 +83,8 @@ async def start_handler(client: Client, message: Message):
     user_id = message.from_user.id
     mention = f"[{message.from_user.first_name}](tg://user?id={user_id})"
     if len(message.command) < 2:
-        if user_id in ADMINS:
-            welcome_text = (
-                f"👋 **Welcome, Admin {mention}!**\n\n"
-                "You can create secure links by sending me any text content."
-            )
-        else:
-            welcome_text = (
-                f"👋 **Welcome, {mention}!**\n\n"
-                "My Father - @DshDm_bot"
-            )
+        welcome_text = f"👋 **Welcome, {'Admin ' if user_id in ADMINS else ''}{mention}!**\n\n" + \
+                       ("You can create secure links." if user_id in ADMINS else "My Father - @DshDm_bot")
         await message.reply(welcome_text, parse_mode=enums.ParseMode.MARKDOWN)
     else:
         try:
@@ -130,14 +107,13 @@ async def start_handler(client: Client, message: Message):
         except Exception as e:
             logger.error(f"Error in start_handler: {e}")
             await message.reply("❌ This link is invalid or has expired.")
-    try:
-        await client.send_message(
-            LOGGER_ID,
-            f"Bot started by: {mention}",
-            parse_mode=enums.ParseMode.MARKDOWN
-        )
-    except Exception as e:
-        logger.warning(f"Could not log to LOGGER_ID {LOGGER_ID}: {e}")
+
+    if await is_logger_id_valid(client):
+        try:
+            await client.send_message(LOGGER_ID, f"Bot started by: {mention}", parse_mode=enums.ParseMode.MARKDOWN)
+        except Exception as e:
+            logger.warning(f"Could not log to LOGGER_ID {LOGGER_ID}: {e}")
+
     if not await db.present_user(user_id):
         await db.add_user(user_id, message.from_user.username, message.from_user.first_name)
     else:
@@ -145,87 +121,26 @@ async def start_handler(client: Client, message: Message):
     if message.chat.type != enums.ChatType.PRIVATE:
         await db.create_channel(message.chat.id, message.chat.title, message.chat.username)
 
-@app.on_message(filters.private & filters.command("stats") & filters.user(ADMINS))
-async def stats_handler(client: Client, message: Message):
-    await handle_stats(client, message, db, bot_start_time)
-
-@app.on_message(filters.private & filters.command("broadcast") & filters.user(ADMINS))
-async def broadcast_handler(client: Client, message: Message):
-    from tools import handle_broadcast
-    await handle_broadcast(client, message, db)
-
-def join_request_callback(client: Client, update: ChatJoinRequest):
-    if hasattr(update, 'deleted') and update.deleted:
-        client.loop.create_task(handle_deleted_request(client, update))
-    else:
-        client.loop.create_task(handle_join_request(client, update))
-
-app.add_handler(ChatJoinRequestHandler(join_request_callback))
-
-@app.on_message(filters.command(["settime", "st"]) & filters.user(ADMINS))
-async def set_delay_handler(client: Client, message: Message):
-    await set_approve_delay(client, message)
-
-@app.on_message(filters.command(["d", "default"]) & filters.user(ADMINS))
-async def reset_delay_handler(client: Client, message: Message):
-    await reset_delay(client, message)
-
-@app.on_message(filters.private & filters.user(ADMINS))
-async def owner_handler(client: Client, message: Message):
-    if message.text and message.text.startswith('/'):
-        return
-    if message.forward_from_chat and message.forward_from_chat.id == LOGGER_ID:
-        msg_id = message.forward_from_message_id
-    elif message.text:
-        try:
-            log_msg = await client.send_message(LOGGER_ID, message.text)
-            msg_id = log_msg.id
-        except Exception as e:
-            await message.reply(f"❌ Error saving content: {e}")
-            return
-    else:
-        await message.reply("❌ Please send text content or forward a message")
-        return
-    encoded_string = generate_encoded_string(msg_id)
-    bot_link = f"https://t.me/{app.me.username}?start={encoded_string}"
-    share_button = InlineKeyboardButton("🔁 Share URL", url=f"https://telegram.me/share/url?url={bot_link}")
-    await message.reply(
-        f"✅ **Secure Link Created!**\n\n"
-        f"{bot_link}",
-        reply_markup=InlineKeyboardMarkup([[share_button]]),
-        parse_mode=enums.ParseMode.MARKDOWN
-    )
-    original_content = (await client.get_messages(LOGGER_ID, msg_id)).text
-    await db.create_link(original_content, message.from_user.id)
-
 # --- Main Execution ---
 if __name__ == "__main__":
     print("🚀 Starting bot...")
     app.start()
     
-    # Start web server in a separate thread
-    import threading
-    web_thread = threading.Thread(target=run_web_server)
-    web_thread.start()
+    # Start Flask server in a separate thread
+    flask_thread = threading.Thread(target=run_flask)
+    flask_thread.start()
 
-    # Validate logger channel and permissions
     try:
         logger_chat = app.get_chat(LOGGER_ID)
         if logger_chat.type not in (enums.ChatType.CHANNEL, enums.ChatType.SUPERGROUP):
-            print(f"❌ LOGGER_ID {LOGGER_ID} is not a channel/supergroup")
+            logger.error(f"❌ LOGGER_ID {LOGGER_ID} is not a channel/supergroup")
             exit(1)
         bot_me = app.get_me()
         admins = app.get_chat_members(LOGGER_ID, filter=enums.ChatMembersFilter.ADMINISTRATORS)
-        bot_admin = next((admin for admin in admins if admin.user.id == bot_me.id), None)
-        if not bot_admin:
-            print(f"❌ Bot is not admin in logger channel {LOGGER_ID}")
-            print("Please make the bot an admin and restart")
+        if not any(admin.user.id == bot_me.id for admin in admins):
+            logger.error(f"❌ Bot is not admin in logger channel {LOGGER_ID}")
             exit(1)
-        if not bot_admin.can_post_messages:
-            print(f"❌ Bot lacks permission to post messages in logger channel {LOGGER_ID}")
-            print("Please grant 'Post Messages' permission and restart")
-            exit(1)
-        print(f"✅ Logger channel validated: {logger_chat.title} (ID: {LOGGER_ID})")
+        logger.info(f"✅ Logger channel validated: {logger_chat.title} (ID: {LOGGER_ID})")
         try:
             app.send_message(OWNER_ID, "✅ Bot has started successfully!")
         except Exception as e:
