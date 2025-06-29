@@ -6,8 +6,7 @@ from pyrogram.handlers import ChatJoinRequestHandler
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ChatJoinRequest
 from pyrogram.errors import PeerIdInvalid, ChannelInvalid, UserAlreadyParticipant
 from collections import defaultdict
-from tools import (handle_join_request, handle_deleted_request, 
-                   set_approve_delay, reset_delay, handle_stats, handle_broadcast)
+from tools import *
 
 # --- Dependency Handling ---
 try:
