@@ -6,8 +6,8 @@ from pyrogram.handlers import ChatJoinRequestHandler
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ChatJoinRequest
 from pyrogram.errors import PeerIdInvalid, ChannelInvalid, UserAlreadyParticipant, ConnectionError
 from collections import defaultdict
-#from tools import handle_join_request, handle_deleted_request, set_approve_delay, reset_delay
-from tools import *
+from tools import (handle_join_request, handle_deleted_request, 
+                   set_approve_delay, reset_delay, handle_stats, handle_broadcast)
 
 # --- Dependency Handling ---
 try:
@@ -16,12 +16,6 @@ except ImportError:
     print("FATAL: 'database.py' not found. Please ensure it exists.")
     exit()
 
-try:
-    from tools import handle_stats
-except ImportError:
-    print("WARNING: 'tools.py' not found. The /stats command will not work.")
-    async def handle_stats(client, message, db, bot_start_time):
-        await message.reply("Stats module is missing.")
 
 # --- Configuration ---
 load_dotenv()
@@ -133,7 +127,6 @@ async def stats_handler(client: Client, message: Message):
 # Broadcast command handler
 @app.on_message(filters.private & filters.command("broadcast") & filters.user(ADMINS))
 async def broadcast_handler(client: Client, message: Message):
-    from tools import handle_broadcast
     await handle_broadcast(client, message, db)
 
 def join_request_callback(client: Client, update: ChatJoinRequest):
