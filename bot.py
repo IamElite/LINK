@@ -115,13 +115,27 @@ async def start_handler(client: Client, message: Message):
 
     # 3. Logger id msg (always log, after reply)
     try:
+        # Ensure bot is in channel before sending message
+        try:
+            await client.get_chat_member(LOGGER_ID, "me")
+        except UserNotParticipant:
+            await client.join_chat(LOGGER_ID)
+            print(f"Joined logger channel: {LOGGER_ID}")
+            
         await client.send_message(
             LOGGER_ID,
             f"Bot started by: {mention}",
             parse_mode=enums.ParseMode.MARKDOWN
         )
-    except Exception:
-        print(f"WARNING: Could not log to LOGGER_ID {LOGGER_ID}")
+    except Exception as e:
+        print(f"ERROR: Could not log to LOGGER_ID {LOGGER_ID}: {e}")
+        # Add detailed error information
+        if "USER_NOT_PARTICIPANT" in str(e):
+            print("Bot is not a member of the logger channel. Please add the bot to the channel.")
+        elif "CHAT_WRITE_FORBIDDEN" in str(e):
+            print("Bot lacks permission to post messages in the logger channel. Please grant 'Post Messages' permission.")
+        elif "PEER_ID_INVALID" in str(e):
+            print("Invalid channel ID. Please verify LOGGER_ID environment variable.")
 
     # Update user and group stats (after all)
     if not await db.present_user(user_id):
@@ -176,10 +190,25 @@ async def owner_handler(client: Client, message: Message):
     # Handle text messages
     elif message.text:
         try:
+            # Ensure bot is in channel before sending message
+            try:
+                await client.get_chat_member(LOGGER_ID, "me")
+            except UserNotParticipant:
+                await client.join_chat(LOGGER_ID)
+                print(f"Joined logger channel: {LOGGER_ID}")
+                
             log_msg = await client.send_message(LOGGER_ID, message.text)
             msg_id = log_msg.id
         except Exception as e:
-            await message.reply(f"❌ Error saving content: {e}")
+            error_msg = f"❌ Error saving content: {e}"
+            if "USER_NOT_PARTICIPANT" in str(e):
+                error_msg += "\n\nBot is not a member of the logger channel. Please add the bot to the channel."
+            elif "CHAT_WRITE_FORBIDDEN" in str(e):
+                error_msg += "\n\nBot lacks permission to post messages. Please grant 'Post Messages' permission in the channel."
+            elif "PEER_ID_INVALID" in str(e):
+                error_msg += "\n\nInvalid channel ID. Please verify LOGGER_ID environment variable."
+                
+            await message.reply(error_msg)
             return
     else:
         await message.reply("❌ Please send text content or forward a message")
