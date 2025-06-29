@@ -234,12 +234,20 @@ if __name__ == "__main__":
             print(f"❌ LOGGER_ID {LOGGER_ID} is not a channel/supergroup")
             exit(1)
         
-        # Check admin privileges
+        # Check admin privileges and posting permissions
         bot_me = app.get_me()
         admins = app.get_chat_members(LOGGER_ID, filter=enums.ChatMembersFilter.ADMINISTRATORS)
-        if bot_me.id not in [admin.user.id for admin in admins]:
+        bot_admin = next((admin for admin in admins if admin.user.id == bot_me.id), None)
+        
+        if not bot_admin:
             print(f"❌ Bot is not admin in logger channel {LOGGER_ID}")
             print("Please make the bot an admin and restart")
+            exit(1)
+            
+        # Check specific permission to post messages
+        if not bot_admin.can_post_messages:
+            print(f"❌ Bot lacks permission to post messages in logger channel {LOGGER_ID}")
+            print("Please grant 'Post Messages' permission and restart")
             exit(1)
         
         print(f"✅ Logger channel validated: {logger_chat.title} (ID: {LOGGER_ID})")
