@@ -1,4 +1,5 @@
-pyrogram
+pyrogram==2.0.106
 TgCrypto
 motor
-python-dotenv
+python-dotenv==1.0.0
+gunicorn==20.1.0
