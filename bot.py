@@ -19,12 +19,12 @@ except ImportError:
 # --- Configuration ---
 load_dotenv()
 
-API_ID = int(os.getenv("API_ID", "14050586"))
-API_HASH = os.getenv("API_HASH", "2a60d9c657b106370c79bb0a8ac560c")
+API_ID = int(os.getenv("API_ID", "0"))
+API_HASH = os.getenv("API_HASH", "")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
-OWNER_ID = int(os.getenv("OWNER_ID", "7074383232"))
-MONGO_URL = os.getenv("MONGO_URL", "mongodb+srv://ar:durgesh@ar.yqov3el.mongodb.net/?retryWrites=true&w=majority")
-LOGGER_ID = int(os.getenv("LOGGER_ID", "-1002536216907"))
+OWNER_ID = int(os.getenv("OWNER_ID", "0"))
+MONGO_URL = os.getenv("MONGO_URL", "")
+LOGGER_ID = int(os.getenv("LOGGER_ID", "0"))
 
 # Configure admin users
 try:
