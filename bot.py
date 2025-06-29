@@ -30,7 +30,13 @@ API_HASH = os.getenv("API_HASH", "")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 OWNER_ID = int(os.getenv("OWNER_ID", "0"))
 MONGO_URL = os.getenv("MONGO_URL", "")
+# Convert to negative if positive and validate
 LOGGER_ID = int(os.getenv("LOGGER_ID", "0"))
+if LOGGER_ID == 0:
+    print("FATAL: LOGGER_ID environment variable is not set.")
+    exit(1)
+if LOGGER_ID > 0:
+    LOGGER_ID = -LOGGER_ID
 
 # Configure admin users
 try:
@@ -199,12 +205,32 @@ async def owner_handler(client: Client, message: Message):
 if __name__ == "__main__":
     print("🚀 Starting bot...")
     app.start()
-    
+
+    # Validate logger channel and permissions
     try:
-        app.send_message(OWNER_ID, "✅ Bot has started successfully!")
+        logger_chat = app.get_chat(LOGGER_ID)
+        if logger_chat.type not in (enums.ChatType.CHANNEL, enums.ChatType.SUPERGROUP):
+            print(f"❌ LOGGER_ID {LOGGER_ID} is not a channel/supergroup")
+            exit(1)
+        
+        # Check admin privileges
+        bot_me = app.get_me()
+        admins = app.get_chat_members(LOGGER_ID, filter=enums.ChatMembersFilter.ADMINISTRATORS)
+        if bot_me.id not in [admin.user.id for admin in admins]:
+            print(f"❌ Bot is not admin in logger channel {LOGGER_ID}")
+            print("Please make the bot an admin and restart")
+            exit(1)
+        
+        print(f"✅ Logger channel validated: {logger_chat.title} (ID: {LOGGER_ID})")
+
+        try:
+            app.send_message(OWNER_ID, "✅ Bot has started successfully!")
+        except Exception as e:
+            print(f"⚠️ Startup notification failed: {e}")
+        
+        print(f"🤖 Bot @{app.me.username} is running!")
+        idle()
+        print("🛑 Bot stopped.")
     except Exception as e:
-        print(f"⚠️ Startup notification failed: {e}")
-    
-    print(f"🤖 Bot @{app.me.username} is running!")
-    idle()
-    print("🛑 Bot stopped.")
+        print(f"FATAL: Failed to validate logger channel: {e}")
+        exit(1)
