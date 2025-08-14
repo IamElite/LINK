@@ -12,8 +12,7 @@ API_ID    = int(os.getenv("API_ID", 0))
 API_HASH  = os.getenv("API_HASH", "")
 BOT_TOKEN = os.getenv("BOT_TOKEN", "")
 OWNER_ID  = int(os.getenv("OWNER_ID", 0))
-LOGGER_ID = int(os.getenv("LOGGER_ID", 0))
-MONGO_URL = os.getenv("MONGO_URL", "")
+LOGGER_ID = int(os.getenv("LOGGER_ID", 0))   # <- MUST be -1002536216907
 
 ADMINS = [7074383232, OWNER_ID, 1679112664]
 for x in os.environ.get("ADMINS", "").split():
@@ -40,7 +39,6 @@ async def dec_enc(enc: str) -> int:
 async def start(c, m):
     uid = m.from_user.id
     mention = f"[{m.from_user.first_name}](tg://user?id={uid})"
-
     if len(m.command) < 2:
         txt = f"👋 **Welcome,{' Admin' if uid in ADMINS else ''} {mention}**"
         return await m.reply(txt)
@@ -57,7 +55,7 @@ async def start(c, m):
         caption = parts[1].strip() if len(parts) > 1 else "🔓 **Content Unlocked!**"
         url = msg.text.strip()
 
-        # validate url
+        # ensure valid URL
         if not url.startswith(("http://", "https://", "tg://")):
             url = f"https://t.me/{url.lstrip('@')}"
 
@@ -85,9 +83,6 @@ async def admin_handler(c, m):
         try:
             msg = await c.send_message(LOGGER_ID, link)
             mid = msg.id
-            if caption:
-                # store caption in your DB if you wish
-                pass
         except Exception as e:
             return await m.reply(f"❌ {e}")
     else:
@@ -104,24 +99,24 @@ async def admin_handler(c, m):
 
 # ---------- WEB HEALTH ----------
 async def run_web():
-    app_web = web.Application()
+    web_app = web.Application()
     async def health(_):
         return web.Response(text=f"Bot @{app.me.username or 'link_bot'} is alive!")
-    app_web.router.add_get("/", health)
-
-    runner = web.AppRunner(app_web)
+    web_app.router.add_get("/", health)
+    runner = web.AppRunner(web_app)
     await runner.setup()
     port = int(os.environ.get("PORT", 8080))
     site = web.TCPSite(runner, "0.0.0.0", port)
     await site.start()
     print(f"🌍 Web server on 0.0.0.0:{port}")
 
-# ---------- WARM LOGGER ----------
+# ---------- WARM LOGGER (CHANNEL) ----------
 async def warm_logger():
     try:
-        await app.join_chat(LOGGER_ID)          # force join (also warms cache)
-    except (UserAlreadyParticipant, ChannelInvalid):
-        await app.get_chat(LOGGER_ID)           # already member → just warm
+        # For channels we can't join; just make any call to warm cache
+        await app.get_chat(LOGGER_ID)
+    except PeerIdInvalid:
+        print("⚠️ Bot is not admin in the LOGGER channel or LOGGER_ID is wrong.")
     except Exception as e:
         print(f"⚠️ Logger warm failed: {e}")
 
