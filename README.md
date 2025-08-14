@@ -11,7 +11,7 @@ A Telegram bot for generating and managing shareable links with MongoDB storage.
 ## Deployment
 
 ### Heroku
-[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/IamElite/LINK)
+[![Deploy](https://www.herokucdn.com/deploy/button.svg)](https://heroku.com/deploy?template=https://github.com/IamElite/LINK/tree/m1)
 
 1. Click the "Deploy to Heroku" button above
 2. Fill in the required environment variables:
@@ -89,3 +89,4 @@ docker run -d --name link-bot --env-file .env telegram-link-bot
 - Replace `yourusername/your-repo-name` in the deployment buttons with your actual GitHub repository
 - Make sure your MongoDB instance is accessible from the deployment platform
 - For Koyeb, you may need to configure the port if running other services
+
