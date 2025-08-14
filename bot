@@ -35,7 +35,7 @@ LOGGER_ID = int(os.getenv("LOGGER_ID", "0"))
 # Configure admin users
 try:
     ADMINS = [7074383232]
-    for x in (os.environ.get("ADMINS", "7074383232").split()):
+    for x in (os.environ.get("ADMINS", "7074383232 7163796885 6604184902 7737229061").split()):
         ADMINS.append(int(x))
 except ValueError:
     raise Exception("Your Admins list does not contain valid integers.")
@@ -208,4 +208,5 @@ if __name__ == "__main__":
     print(f"🤖 Bot @{app.me.username} is running!")
     idle()
     print("🛑 Bot stopped.")
+
 
