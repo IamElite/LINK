@@ -27,7 +27,7 @@
     "MONGO_URL": {
       "description": "MongoDB connection URI",
       "required": true,
-      "value": "mongodb+srv://Hello:Hello@cluster0.pi9ks.mongodb.net/?retryWrites=true&w=majority"  
+      "value": "mongodb+srv://ar:durgesh@ar.yqov3el.mongodb.net/?retryWrites=true&w=majority"  
     },
     "LOGGER_ID": {
       "description": "Channel ID for logging (optional)",
@@ -42,7 +42,7 @@
     "UPSTREAM_BRANCH": {
       "description": "Branch name for the repository",
       "required": false,
-      "value": "main"  
+      "value": "m1"  
     }
   },
     "buildpacks": [
@@ -60,3 +60,4 @@
         }
     }
 }
+
