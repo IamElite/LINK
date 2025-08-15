@@ -103,7 +103,7 @@ async def start_handler(client: Client, message: Message):
                 url=link if link.startswith("http") else f"https://t.me/{link.lstrip('@')}"
             )
             aa = await message.reply(
-                caption,  # Use stored caption or default
+                f"**{caption}**",  # Make caption bold
                 reply_markup=InlineKeyboardMarkup([[content_button]]),
                 protect_content=True,
                 disable_notification=True,
@@ -257,4 +257,3 @@ if __name__ == "__main__":
     idle()
     print("🛑 Bot stopped.")
     app.stop()
-
