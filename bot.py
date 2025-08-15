@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 from aiohttp import web
 from pyrogram import Client, filters, enums, idle
 from pyrogram.handlers import ChatJoinRequestHandler
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ChatJoinRequest
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ChatJoinRequest, LinkPreviewOptions
 from pyrogram.errors import PeerIdInvalid, ChannelInvalid, UserAlreadyParticipant
 from collections import defaultdict
 from tools import *
@@ -92,7 +92,7 @@ async def start_handler(client: Client, message: Message):
             # Get caption from database
             link_record = await db.links.find_one({"logger_msg_id": msg_id})
             if link_record:
-                caption = link_record.get("caption", "Content Unlocked!")
+                caption = link_record.get("caption", "🔓 **Cᴏɴᴛᴇɴᴛ Uɴʟᴏᴄᴋᴇᴅ!**")
                 # Increment access count
                 await db.increment_link_access(link_record['_id'])
             else:
@@ -107,7 +107,7 @@ async def start_handler(client: Client, message: Message):
                 reply_markup=InlineKeyboardMarkup([[content_button]]),
                 protect_content=True,
                 disable_notification=True,
-                disable_web_page_preview=True,
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
                 parse_mode=enums.ParseMode.MARKDOWN
             )
             await asyncio.sleep(180)
@@ -257,3 +257,4 @@ if __name__ == "__main__":
     idle()
     print("🛑 Bot stopped.")
     app.stop()
+
