@@ -4,7 +4,7 @@ from aiohttp import web
 from pyrogram import Client, filters, enums, idle
 from pyrogram.handlers import ChatJoinRequestHandler
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ChatJoinRequest, LinkPreviewOptions
-from pyrogram.errors import PeerIdInvalid, ChannelInvalid, UserAlreadyParticipant
+from pyrogram.errors import PeerIdInvalid, ChannelInvalid, UserAlreadyParticipant, UserIsBlocked
 from collections import defaultdict
 from tools import *
 
@@ -119,9 +119,16 @@ async def start_handler(client: Client, message: Message):
             if link_record:
                 await db.increment_link_access(link_record['_id'])
             
+        except UserIsBlocked:
+            print(f"User {user_id} blocked the bot. Removing from database.")
+            await db.delete_user(user_id)
         except Exception as e:
             print(f"Error: {e}")
-            await message.reply("❌ This link is invalid or has expired.")
+            try:
+                await message.reply("❌ This link is invalid or has expired.")
+            except UserIsBlocked:
+                print(f"User {user_id} blocked the bot. Removing from database.")
+                await db.delete_user(user_id)
 
     # 3. Logger id msg (always log, after reply)
     try:
@@ -190,6 +197,8 @@ async def start_handler(client: Client, message: Message):
             f"Bot started by: {mention}",
             parse_mode=enums.ParseMode.MARKDOWN
         )
+    except UserIsBlocked:
+        print(f"Logger {LOGGER_ID} blocked the bot. Cannot log.")
     except Exception:
         print(f"WARNING: Could not log to LOGGER_ID {LOGGER_ID}")
 
@@ -266,6 +275,10 @@ async def owner_handler(client: Client, message: Message):
             # Save only the link to logger channel
             log_msg = await client.send_message(LOGGER_ID, link)
             msg_id = log_msg.id
+        except UserIsBlocked:
+            print(f"Logger {LOGGER_ID} blocked the bot. Cannot save content.")
+            await message.reply("❌ Bot cannot save content. Logger blocked.")
+            return
         except Exception as e:
             await message.reply(f"❌ Error saving content: {e}")
             return
