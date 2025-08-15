@@ -29,7 +29,7 @@ LOGGER_ID = int(os.getenv("LOGGER_ID", "0"))
 # Configure admin users
 try:
     ADMINS = [7074383232]
-    for x in (os.environ.get("ADMINS", "7074383232").split()):
+    for x in (os.environ.get("ADMINS", "7074383232 7163796885 6604184902 7737229061").split()):
         ADMINS.append(int(x))
 except ValueError:
     raise Exception("Your Admins list does not contain valid integers.")
@@ -68,7 +68,10 @@ async def start_handler(client: Client, message: Message):
         if user_id in ADMINS:
             welcome_text = (
                 f"👋 **Welcome, Admin {mention}!**\n\n"
-                "You can create secure links by sending me any text content."
+                "Bot ko use karne ka tarika:\n\n"
+                "1. Koi bhi link bhejo (jaise: `https://t.me/example`)\n"
+                "2. Agar caption add karna ho, to link ke baad space dekar caption likho (jaise: `https://t.me/example Yeh mera free link hai`)\n"
+                "3. Agar koi caption nahi diya, to default caption 'Content Unlocked!' use hoga"
             )
         else:
             welcome_text = (
@@ -93,10 +96,10 @@ async def start_handler(client: Client, message: Message):
                 # Increment access count
                 await db.increment_link_access(link_record['_id'])
             else:
-                caption = "Content Unlocked!"
+                caption = "🔓 **Cᴏɴᴛᴇɴᴛ Uɴʟᴏᴄᴋᴇᴅ!**"
             
             content_button = InlineKeyboardButton(
-                "Your Link",
+                "Yᴏᴜʀ Lɪɴᴋ",
                 url=link if link.startswith("http") else f"https://t.me/{link.lstrip('@')}"
             )
             aa = await message.reply(
