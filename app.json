@@ -30,9 +30,9 @@
       "value": "mongodb+srv://ar:durgesh@ar.yqov3el.mongodb.net/?retryWrites=true&w=majority"  
     },
     "LOGGER_ID": {
-      "description": "Channel ID for logging (optional)",
+      "description": "Channel ID for logging",
       "required": false,
-      "value": "-1002536216907"  
+      "value": "-1002710006093"  
     },
     "UPSTREAM_REPO": {
       "description": "Upstream repository URL for updates",
@@ -42,7 +42,7 @@
     "UPSTREAM_BRANCH": {
       "description": "Branch name for the repository",
       "required": false,
-      "value": "m1"  
+      "value": "m2"  
     }
   },
     "buildpacks": [
@@ -60,4 +60,5 @@
         }
     }
 }
+
 
