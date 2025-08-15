@@ -248,9 +248,9 @@ async def owner_handler(client: Client, message: Message):
     if message.text and message.text.startswith('/'):
         return
     
-    # Handle forwarded messages
-    if message.forward_from_chat and message.forward_from_chat.id == LOGGER_ID:
-        msg_id = message.forward_from_message_id
+    # Handle forwarded messages (using forward_origin to avoid deprecation warnings)
+    if message.forward_origin and hasattr(message.forward_origin, 'chat') and message.forward_origin.chat.id == LOGGER_ID:
+        msg_id = message.forward_origin.message_id
         # For forwarded messages, use the original content as both link and caption
         original_content = (await client.get_messages(LOGGER_ID, msg_id)).text
         link = original_content.split()[0] if original_content else ""
