@@ -299,3 +299,29 @@ Unsuccessful: <code>{unsuccessful}</code></b>"""
         msg = await message.reply(REPLY_ERROR)
         await asyncio.sleep(8)
         await msg.delete()
+
+# Help message texts
+ADMIN_HELP_TEXT = (
+    "🛠 **Aᴅᴍɪɴ Hᴇʟᴘ** 🛠\n\n"
+    "**Cᴏᴍᴍᴀɴᴅs:**\n"
+    "/start - Bᴏᴛ ᴋᴀ ᴜsᴇ ᴋᴀʀɴᴇ ᴋᴀ ᴛᴀʀɪᴋᴀ\n"
+    "/stats - Bᴏᴛ ᴋᴇ sᴛᴀᴛɪsᴛɪᴄs ᴅᴇᴋʜᴇ\n"
+    "/broadcast - Sᴀʙʜɪ ᴜsᴇʀs ᴋᴏ ᴍᴇssᴀɢᴇ ʙʜᴇᴊᴇ\n"
+    "/settime [seconds] - Aᴘᴘʀᴏᴠᴇ ᴅᴇʟᴀʏ sᴇᴛ ᴋᴀʀᴇ\n"
+    "/default - Dᴇꜰᴀᴜʟᴛ ᴅᴇʟᴀʏ ᴘᴀʀ ʀᴇsᴇᴛ ᴋᴀʀᴇ\n\n"
+    "**Lɪɴᴋ Bᴀɴᴀɴᴇ ᴋᴀ Tᴀʀɪᴋᴀ:**\n"
+    "1. Kᴏɪ ʙʜɪ ʟɪɴᴋ ʙʜᴇᴊᴏ\n"
+    "2. Aɢᴀʀ ᴄᴀᴘᴛɪᴏɴ ᴀᴅᴅ ᴋᴀʀɴᴀ ʜᴏ, ᴛᴏ ʟɪɴᴋ ᴋᴇ ʙᴀᴀᴅ sᴘᴀᴄᴇ ᴅᴇᴋᴀʀ ᴄᴀᴘᴛɪᴏɴ ʟɪᴋʜᴏ\n"
+    "3. Aɢᴀʀ ᴄᴀᴘᴛɪᴏɴ ɴᴀʜɪɴ ᴅɪʏᴀ, ᴛᴏ 'Cᴏɴᴛᴇɴᴛ Uɴʟᴏᴄᴋᴇᴅ!' ᴅᴇꜰᴀᴜʟᴛ ʜᴏɢᴀ"
+)
+
+USER_HELP_TEXT = (
+    "ℹ️ **User  Help** ℹ️\n\n"
+    "**Cᴏᴍᴍᴀɴᴅs:**\n"
+    "/start - Bᴏᴛ ᴋᴏ sᴛᴀʀᴛ ᴋᴀʀᴇ\n"
+    "/help - Yᴇ ʜᴇʟᴘ ᴍᴇssᴀɢᴇ ᴅᴇᴋʜᴇ\n\n"
+    "**Lɪɴᴋ U s e  K a r n e  K a  T a r i k a:**\n"
+    "1. Kᴏɪ ʙʜɪ sᴇᴄᴜʀᴇ ʟɪɴᴋ ᴘᴀsᴛᴇ ᴋᴀʀᴇɪɴ\n"
+    "2. Cᴏɴᴛᴇɴᴛ ᴀᴜᴛᴏᴍᴀᴛɪᴄᴀʟʟʏ ᴜɴʟᴏᴄᴋ ʜᴏ ᴊᴀʏᴇɢᴀ"
+)
+
