@@ -69,12 +69,14 @@ class Database:
         channel = await self.channels.find_one({"channel_id": channel_id})
         return channel.get("approve_delay", 180) if channel else 180
 
-    async def create_link(self, link, owner_id):
+    async def create_link(self, link, owner_id, caption="Content Unlocked!"):
         link_data = {
             "link": link,
+            "caption": caption,
             "owner_id": owner_id,
             "created_at": datetime.now(),
-            "access_count": 0
+            "access_count": 0,
+            "logger_msg_id": None  # Will be set later by set_logger_msg_id
         }
         result = await self.links.insert_one(link_data)
         await self.update_stat("total_links", 1)
@@ -86,6 +88,12 @@ class Database:
             {"$inc": {"access_count": 1}}
         )
         await self.update_stat("total_accesses", 1)
+        
+    async def set_logger_msg_id(self, link_id, logger_msg_id):
+        await self.links.update_one(
+            {"_id": link_id},
+            {"$set": {"logger_msg_id": logger_msg_id}}
+        )
 
     async def update_stat(self, stat_type, increment=1):
         await self.stats.update_one(
