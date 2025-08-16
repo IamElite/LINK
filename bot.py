@@ -2,8 +2,7 @@ import os, re, base64, asyncio, time, random, logging
 from dotenv import load_dotenv
 from aiohttp import web
 from pyrogram import Client, filters, enums, idle
-from pyrogram.handlers import ChatJoinRequestHandler
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ChatJoinRequest, LinkPreviewOptions
 from pyrogram.errors import PeerIdInvalid, ChannelInvalid, UserAlreadyParticipant, UserIsBlocked
 from collections import defaultdict
 from tools import *
@@ -260,3 +259,4 @@ if __name__ == "__main__":
     try: app.send_message(LOGGER_ID,"✅ Bot started")
     except: pass
     idle(); app.stop()
+
