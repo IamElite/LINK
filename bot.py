@@ -254,9 +254,11 @@ async def web_server():
     await web.TCPSite(runner, "0.0.0.0", int(os.getenv("PORT",8080))).start()
 
 if __name__ == "__main__":
-    app.start()
-    app.loop.create_task(web_server())
+    print("🚀 Starting..."); app.start()
+    asyncio.create_task(start())
     try: app.send_message(LOGGER_ID,"✅ Bot started")
     except: pass
-    idle(); app.stop()
+    print(f"🤖 @{app.me.username} running"); idle()
+    print("🛑 Stopped"); app.stop()
+
 
