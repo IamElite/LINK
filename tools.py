@@ -133,7 +133,7 @@ async def reset_delay(client: Client, message: Message):
     
     if message.chat.type == enums.ChatType.PRIVATE:
         if not args:
-            await message.reply("Usage: /d <channel_id/link/username>")
+            await message.reply("Usage: /default <channel_id/link/username>\nExample: /default @my_channel")
             return
         target = args[0]
         
@@ -169,9 +169,8 @@ async def reset_delay(client: Client, message: Message):
         except Exception as e:
             print(f"Error creating channel entry: {e}")
     
-    # Only update if current delay is different from default
-    if current_delay != 180:
-        await client.db.set_approve_delay(target_chat_id, 180)
+    # Always update to default value (180 seconds)
+    await client.db.set_approve_delay(target_chat_id, 180)
     
     # Get chat title for response
     try:
@@ -187,15 +186,12 @@ async def reset_delay(client: Client, message: Message):
         minutes = seconds // 60
         return f"{minutes} minutes"
     
-    # Show appropriate message based on whether value changed
-    if current_delay == 180:
-        await message.reply(f"✅ Join request delay for {chat_name} is already set to default ({format_delay(current_delay)})")
-    else:
-        await message.reply(
-            f"✅ Join request delay for {chat_name} reset:\n"
-            f"Previous: {format_delay(current_delay)}\n"
-            f"New: 3 minutes"
-        )
+    # Always show reset confirmation
+    await message.reply(
+        f"✅ Join request delay for {chat_name} reset to default:\n"
+        f"Previous: {format_delay(current_delay)}\n"
+        f"New: 3 minutes"
+    )
 
 def parse_time(time_str: str) -> int:
     """Convert time string to seconds (e.g., '30s' -> 30, '2m' -> 120)"""
