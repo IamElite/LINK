@@ -189,7 +189,7 @@ async def reset_delay(client: Client, message: Message):
     
     # Show appropriate message based on whether value changed
     if current_delay == 180:
-        await message.reply(f"✅ Join request delay for {chat_name} is already set to default (3 minutes)")
+        await message.reply(f"✅ Join request delay for {chat_name} is already set to default ({format_delay(current_delay)})")
     else:
         await message.reply(
             f"✅ Join request delay for {chat_name} reset:\n"
