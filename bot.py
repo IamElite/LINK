@@ -173,10 +173,13 @@ async def owner_handler(client:Client,message:Message):
 
 # --- Main Execution & Web Server for Health Check ---
 async def web_server():
-    app_web = web.Application()
-    app_web.router.add_get('/', lambda _: web.Response(text=f"Bot @{app.me.username} alive!"))
-    await web.TCPSite(await web.AppRunner(app_web).setup(), "0.0.0.0", int(os.getenv("PORT", 8080))).start()
-    print(f"🌍 Web server started on {os.getenv('PORT', 8080)}")
+    async def health(_): return web.Response(text=f"Bot @{app.me.username} alive!")
+    app_web = web.Application(); app_web.router.add_get('/', health)
+    runner = web.AppRunner(app_web); await runner.setup()
+    port = int(os.getenv("PORT", 8080))
+    await web.TCPSite(runner, "0.0.0.0", port).start()
+    print(f"🌍 Web server on :{port}")
+
 
 if __name__ == "__main__":
     print("🚀 Starting…")
@@ -188,6 +191,7 @@ if __name__ == "__main__":
     idle()
     print("🛑 Stopped")
     app.stop()
+
 
 
 
