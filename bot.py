@@ -1,9 +1,9 @@
-import os, re, base64, asyncio, time, random
+import os, re, base64, asyncio, time, random, logging
 from dotenv import load_dotenv
 from aiohttp import web
 from pyrogram import Client, filters, enums, idle
 from pyrogram.handlers import ChatJoinRequestHandler
-from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ChatJoinRequest, LinkPreviewOptions
+from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from pyrogram.errors import PeerIdInvalid, ChannelInvalid, UserAlreadyParticipant, UserIsBlocked
 from collections import defaultdict
 from tools import *
@@ -112,12 +112,15 @@ async def start_handler(client: Client, message: Message):
                 link_preview_options=LinkPreviewOptions(is_disabled=True),
                 parse_mode=enums.ParseMode.MARKDOWN
             )
-            await asyncio.sleep(180)
-            await aa.delete()
+            # Delete message after delay in background
+            async def delete_msg():
+                await asyncio.sleep(180)
+                try:
+                    await aa.delete()
+                except:
+                    pass  # Ignore if message already deleted
+            asyncio.create_task(delete_msg())
             
-            # Increment access count if record exists
-            if link_record:
-                await db.increment_link_access(link_record['_id'])
             
         except UserIsBlocked:
             print(f"User {user_id} blocked the bot. Removing from database.")
@@ -130,15 +133,17 @@ async def start_handler(client: Client, message: Message):
                 print(f"User {user_id} blocked the bot. Removing from database.")
                 await db.delete_user(user_id)
 
-    # 3. Logger id msg (always log, after reply)
-    try:
-        await client.send_message(
-            LOGGER_ID,
-            f"Bot started by: {mention}",
-            parse_mode=enums.ParseMode.MARKDOWN
-        )
-    except Exception:
-        print(f"WARNING: Could not log to LOGGER_ID {LOGGER_ID}")
+    # 3. Logger id msg (background task)
+    async def log_start():
+        try:
+            await client.send_message(
+                LOGGER_ID,
+                f"Bot started by: {mention}",
+                parse_mode=enums.ParseMode.MARKDOWN
+            )
+        except Exception:
+            print(f"WARNING: Could not log to LOGGER_ID {LOGGER_ID}")
+    asyncio.create_task(log_start())
 
     # Update user and group stats (after all)
     if not await db.present_user(user_id):
@@ -242,38 +247,16 @@ async def owner_handler(client: Client, message: Message):
 
 
 # --- Main Execution & Web Server for Health Check ---
-async def run_web_server():
-    """Starts a web server for Koyeb health checks."""
-    web_app = web.Application()
-    async def health_check(_):
-        try:
-            # Check if client is connected before accessing attributes
-            bot_username = app.me.username if app.is_connected else "Bot (connecting...)"
-        except AttributeError:
-            bot_username = "Bot (initializing...)"
-        return web.Response(text=f"Bot @{bot_username} is alive!")
-
-    web_app.add_routes([web.get('/', health_check)])
-    runner = web.AppRunner(web_app)
+async def web_server():
+    app_web = web.Application()
+    app_web.router.add_get('/', lambda _: web.Response(text=f"Bot @{app.me.username} alive!"))
+    runner = web.AppRunner(app_web)
     await runner.setup()
-    # Koyeb provides the port to bind to in the PORT environment variable.
-    port = int(os.environ.get("PORT", 8080))
-    site = web.TCPSite(runner, "0.0.0.0", port)
-    try:
-        await site.start()
-        print(f"🌍 Web server started on 0.0.0.0:{port}")
-    except Exception as e:
-        print(f"❌ Failed to start web server: {e}")
+    await web.TCPSite(runner, "0.0.0.0", int(os.getenv("PORT",8080))).start()
 
 if __name__ == "__main__":
-    print("🚀 Starting bot...")
     app.start()
-    app.loop.create_task(run_web_server())
-    try:
-        app.send_message(OWNER_ID, "✅ Bot has started successfully!")
-    except Exception as e:
-        print(f"⚠️ Startup notification failed: {e}")
-    print(f"🤖 Bot @{app.me.username} is running!")
-    idle()
-    print("🛑 Bot stopped.")
-    app.stop()
+    app.loop.create_task(web_server())
+    try: app.send_message(LOGGER_ID,"✅ Bot started")
+    except: pass
+    idle(); app.stop()
