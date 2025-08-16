@@ -1,11 +1,13 @@
-import os, re, base64, asyncio, time, random, logging
+import os, re, base64, asyncio, time, random
 from dotenv import load_dotenv
 from aiohttp import web
 from pyrogram import Client, filters, enums, idle
+from pyrogram.handlers import ChatJoinRequestHandler
 from pyrogram.types import InlineKeyboardMarkup, InlineKeyboardButton, Message, ChatJoinRequest, LinkPreviewOptions
 from pyrogram.errors import PeerIdInvalid, ChannelInvalid, UserAlreadyParticipant, UserIsBlocked
 from collections import defaultdict
 from tools import *
+
 
 # --- Dependency Handling ---
 try:
@@ -260,5 +262,6 @@ if __name__ == "__main__":
     except: pass
     print(f"🤖 @{app.me.username} running"); idle()
     print("🛑 Stopped"); app.stop()
+
 
 
