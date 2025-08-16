@@ -113,44 +113,49 @@ async def set_approve_delay(client: Client, message: Message):
     await message.reply(f"✅ Join requests for {chat_name} will now be accepted after {time_str} delay")
 
 
+
 async def reset_delay(client: Client, message: Message):
     if message.chat.type not in (enums.ChatType.GROUP, enums.ChatType.SUPERGROUP, enums.ChatType.CHANNEL, enums.ChatType.PRIVATE):
         await message.reply("❌ This command can only be used in groups, channels or private chats")
         return
-    
+
     args = message.command[1:]
-    if not args:
-        await message.reply("Usage: /d <time>\nExample: /d 3mi")
-        return
-    
-    time_str = args[0]
-    try:
-        delay_seconds = parse_time(time_str)
-    except ValueError:
-        await message.reply("❌ Invalid time format. Use formats like: 30s, 2mi, 1h, 1d")
-        return
-    
-    target_chat_id = "default"
-    if not hasattr(client, 'db'):
-        await message.reply("❌ Database not initialized")
-        return
-    
-    await client.db.set_approve_delay(target_chat_id, delay_seconds)
-    
+    default_setting = await client.db.channels.find_one({"channel_id": "default"})
+    current_delay = default_setting.get("approve_delay", 180) if default_setting else 180
+
     def format_delay(seconds):
         if seconds < 60:
             return f"{seconds} seconds"
         elif seconds < 3600:
-            minutes = seconds // 60
-            return f"{minutes} mi"
+            return f"{seconds//60} mi"
         elif seconds < 86400:
-            hours = seconds // 3600
-            return f"{hours} h"
-        else:
-            days = seconds // 86400
-            return f"{days} d"
-    
-    await message.reply(f"✅ Default join request delay set to: {format_delay(delay_seconds)}")
+            return f"{seconds//3600} h"
+        return f"{seconds//86400} d"
+
+    if not args:
+        await message.reply(
+            f"🕐 Current default delay: {format_delay(current_delay)}\n"
+            f"Usage: /d <time>\nExample: /d 3mi"
+        )
+        return
+
+    try:
+        delay_seconds = parse_time(args[0])
+    except ValueError:
+        await message.reply("❌ Invalid time format. Use: 30s, 2mi, 1h, 1d")
+        return
+
+    if not hasattr(client, 'db'):
+        await message.reply("❌ Database not initialized")
+        return
+
+    await client.db.set_approve_delay("default", delay_seconds)
+    await message.reply(
+        f"✅ Default delay updated:\n"
+        f"Previous: {format_delay(current_delay)}\n"
+        f"New: {format_delay(delay_seconds)}"
+    )
+
 
 def parse_time(time_str: str) -> int:
     time_str = time_str.lower()
@@ -280,5 +285,6 @@ USER_HELP_TEXT = (
     "1. Kᴏɪ ʙʜɪ sᴇᴄᴜʀᴇ ʟɪɴᴋ ᴘᴀsᴛᴇ ᴋᴀʀᴇɪɴ\n"
     "2. Cᴏɴᴛᴇɴᴛ ᴀᴜᴛᴏᴍᴀᴛɪᴄᴀʟʟʏ ᴜɴʟᴏᴄᴋ ʜᴏ ᴊᴀʏᴇɢᴀ"
 )
+
 
 
