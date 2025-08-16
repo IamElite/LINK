@@ -32,6 +32,9 @@ except ValueError:
 ADMINS.append(OWNER_ID)
 ADMINS.append(1679112664)
 
+# Updated list with React emojis
+D = ["😘", "👾", "🤝", "👀", "❤️‍🔥", "💘", "😍", "😇", "🕊️", "🐳", "🎉", "🏆", "🗿", "⚡", "💯", "👌", "🍾"]
+
 db=Database(MONGO_URL)
 bot_start_time=time.time()
 app=Client("link_bot",api_id=API_ID,api_hash=API_HASH,bot_token=BOT_TOKEN)
@@ -48,12 +51,12 @@ async def decode_encoded_string(encoded_str:str)->int:
         raise ValueError("Invalid encoded format.")
     return int(decoded_str.split("-")[1])//abs(LOGGER_ID)
 
-from tools import ADMIN_HELP_TEXT,USER_HELP_TEXT
 
 @app.on_message(filters.command("start"))
 async def start_handler(client:Client,message:Message):
     user_id=message.from_user.id
     mention=f"[{message.from_user.first_name}](tg://user?id={user_id})"
+    await message.react(random.choice(D)
     
     if len(message.command)<2:
         if user_id in ADMINS:
@@ -191,6 +194,7 @@ if __name__ == "__main__":
     idle()
     print("🛑 Stopped")
     app.stop()
+
 
 
 
