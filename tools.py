@@ -126,13 +126,13 @@ async def reset_delay(client: Client, message: Message):
     def fmt_time(sec):
         return (f"{sec//86400}d" if sec >= 86400 else
                 f"{sec//3600}h" if sec >= 3600 else
-                f"{sec//60}m" if sec >= 60 else
+                f"{sec//60}mi" if sec >= 60 else
                 f"{sec}s")
 
     if not args:
         return await message.reply(
             f"⏳ Current delay: <b>{fmt_time(current)}</b>\n"
-            f"Usage: <code>/d 30s/5m/2h/1d</code>"
+            f"Usage: <code>/d 30s/5mi/2h/1d</code>"
         )
 
     try:
@@ -280,6 +280,7 @@ USER_HELP_TEXT = (
     "1. Kᴏɪ ʙʜɪ sᴇᴄᴜʀᴇ ʟɪɴᴋ ᴘᴀsᴛᴇ ᴋᴀʀᴇɪɴ\n"
     "2. Cᴏɴᴛᴇɴᴛ ᴀᴜᴛᴏᴍᴀᴛɪᴄᴀʟʟʏ ᴜɴʟᴏᴄᴋ ʜᴏ ᴊᴀʏᴇɢᴀ"
 )
+
 
 
 
