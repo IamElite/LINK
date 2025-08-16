@@ -249,16 +249,16 @@ async def owner_handler(client: Client, message: Message):
 
 # --- Main Execution & Web Server for Health Check ---
 async def web_server():
-    app_web = web.Application()
-    app_web.router.add_get('/', lambda _: web.Response(text=f"Bot @{app.me.username} alive!"))
-    runner = web.AppRunner(app_web)
+    runner = web.AppRunner(web.Application(routes=[
+        web.get('/', lambda _: web.Response(text=f"Bot @{app.me.username} alive!"))
+    ]))
     await runner.setup()
-    await web.TCPSite(runner, "0.0.0.0", int(os.getenv("PORT",8080))).start()
+    await web.TCPSite(runner, "0.0.0.0", int(os.getenv("PORT", 8080))).start()
 
 if __name__ == "__main__":
     print("🚀 Starting..."); app.start()
-    asyncio.create_task(start())
-    try: app.send_message(LOGGER_ID,"✅ Bot started")
+    asyncio.create_task(web_server())
+    try: app.send_message(LOGGER_ID, "✅ Bot started")
     except: pass
     print(f"🤖 @{app.me.username} running"); idle()
     print("🛑 Stopped"); app.stop()
