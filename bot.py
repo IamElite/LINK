@@ -248,20 +248,25 @@ async def owner_handler(client: Client, message: Message):
 
 
 # --- Main Execution & Web Server for Health Check ---
+
 async def web_server():
-    runner = web.AppRunner(web.Application(routes=[
-        web.get('/', lambda _: web.Response(text=f"Bot @{app.me.username} alive!"))
-    ]))
+    async def health(_):
+        return web.Response(text=f"Bot @{app.me.username} alive!")
+    app_web = web.Application()
+    app_web.router.add_get('/', health)
+    runner = web.AppRunner(app_web)
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", int(os.getenv("PORT", 8080))).start()
 
 if __name__ == "__main__":
-    print("🚀 Starting..."); app.start()
-    asyncio.create_task(web_server())
+    print("🚀 Starting…")
+    app.start()
+    asyncio.get_event_loop().create_task(web_server())
     try: app.send_message(LOGGER_ID, "✅ Bot started")
-    except: pass
-    print(f"🤖 @{app.me.username} running"); idle()
-    print("🛑 Stopped"); app.stop()
-
+    except Exception as e: print(f"[!] Logger send failed: {e}")
+    print(f"🤖 @{app.me.username} running")
+    idle()
+    print("🛑 Stopped")
+    app.stop()
 
 
