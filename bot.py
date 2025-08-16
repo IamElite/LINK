@@ -56,7 +56,7 @@ async def decode_encoded_string(encoded_str:str)->int:
 async def start_handler(client:Client,message:Message):
     user_id=message.from_user.id
     mention=f"[{message.from_user.first_name}](tg://user?id={user_id})"
-    await message.react(random.choice(D)
+    await message.react(random.choice(D))
     
     if len(message.command)<2:
         if user_id in ADMINS:
@@ -194,6 +194,7 @@ if __name__ == "__main__":
     idle()
     print("🛑 Stopped")
     app.stop()
+
 
 
 
