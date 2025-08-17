@@ -63,7 +63,7 @@ async def start_handler(client:Client,message:Message):
             welcome_text=f"👋 **Welcome, Admin {mention}!**\n\nBot ko use karne ka tarika:\n\n1. Koi bhi link bhejo (jaise: `https://t.me/example`)\n2. Agar caption add karna ho, to link ke baad space dekar caption likho (jaise: `https://t.me/example Yeh mera free link hai`)\n3. Agar koi caption nahi diya, to default caption 'Content Unlocked!' use hoga"
         else:
             welcome_text=f"👋 **Welcome, {mention}!**\n\nMy Father - @DshDm_bot"
-        await message.reply(welcome_text,parse_mode=enums.ParseMode.MARKDOWN)
+        await message.reply(welcome_text,parse_mode=enums.ParseMode.MARKDOWN,effect_id=get_random_effect())
     else:
         try:
             encoded_str=re.sub(r'[^\w\-]','',message.command[1])
@@ -197,6 +197,7 @@ if __name__ == "__main__":
     idle()
     print("🛑 Stopped")
     app.stop()
+
 
 
 
