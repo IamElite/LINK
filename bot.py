@@ -80,7 +80,7 @@ async def start_handler(client:Client,message:Message):
                 caption="🔓 **Cᴏɴᴛᴇɴᴛ Uɴʟᴏᴄᴋᴇᴅ!**"
             
             content_button=InlineKeyboardButton("Yᴏᴜʀ Lɪɴᴋ",url=link if link.startswith("http")else f"https://t.me/{link.lstrip('@')}")
-            aa=await message.reply(f"**{caption}**",reply_markup=InlineKeyboardMarkup([[content_button]]),protect_content=True,disable_notification=True,link_preview_options=LinkPreviewOptions(is_disabled=True),parse_mode=enums.ParseMode.MARKDOWN)
+            aa=await message.reply(f"**{caption}**",reply_markup=InlineKeyboardMarkup([[content_button]]),protect_content=True,disable_notification=True,link_preview_options=LinkPreviewOptions(is_disabled=True),parse_mode=enums.ParseMode.MARKDOWN,effect_id=get_random_effect())
             
             async def delete_msg():
                 await asyncio.sleep(180)
@@ -194,6 +194,7 @@ if __name__ == "__main__":
     idle()
     print("🛑 Stopped")
     app.stop()
+
 
 
 
