@@ -80,7 +80,7 @@ async def start_handler(client:Client,message:Message):
                 caption="🔓 **Cᴏɴᴛᴇɴᴛ Uɴʟᴏᴄᴋᴇᴅ!**"
             
             content_button=InlineKeyboardButton("Yᴏᴜʀ Lɪɴᴋ",url=link if link.startswith("http")else f"https://t.me/{link.lstrip('@')}")
-            bb = await message.reply("⚠️ <blockquote><i>ꜱєηᴅ ʏσᴜʀ ʀєǫᴜєꜱᴛ, ɪ’ʟʟ ʀєᴘσʀᴛ ɪᴛ ᴛσ ᴛʜє ᴧᴅϻɪηꜱ. ʏσᴜ’ʟʟ ʙє ᴧᴅᴅєᴅ ᴡɪᴛʜɪη 5 ϻɪηᴜᴛєꜱ.<i></blockquote>", parse_mode=enums.ParseMode.HTML)
+            bb = await message.reply("<blockquote><i>⚠️ ꜱєηᴅ ʏσᴜʀ ʀєǫᴜєꜱᴛ, ɪ’ʟʟ ʀєᴘσʀᴛ ɪᴛ ᴛσ ᴛʜє ᴧᴅϻɪηꜱ. ʏσᴜ’ʟʟ ʙє ᴧᴅᴅєᴅ ᴡɪᴛʜɪη 5 ϻɪηᴜᴛєꜱ.</i></blockquote>", parse_mode=enums.ParseMode.HTML)
             aa=await message.reply(f"**{caption}**",reply_markup=InlineKeyboardMarkup([[content_button]]),protect_content=True,disable_notification=True,link_preview_options=LinkPreviewOptions(is_disabled=True),parse_mode=enums.ParseMode.MARKDOWN,effect_id=get_random_effect())
             
             async def delete_msg():
@@ -197,6 +197,7 @@ if __name__ == "__main__":
     idle()
     print("🛑 Stopped")
     app.stop()
+
 
 
 
