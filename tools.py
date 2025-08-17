@@ -1,4 +1,4 @@
-import time, asyncio
+import time, asyncio, random
 from datetime import timedelta
 from pyrogram import Client, enums, filters
 from pyrogram.types import Message, ChatJoinRequest
@@ -281,6 +281,15 @@ USER_HELP_TEXT = (
     "2. Cᴏɴᴛᴇɴᴛ ᴀᴜᴛᴏᴍᴀᴛɪᴄᴀʟʟʏ ᴜɴʟᴏᴄᴋ ʜᴏ ᴊᴀʏᴇɢᴀ"
 )
 
+def get_random_effect():
+    """Return a random free Telegram message-effect ID."""
+    EFFECT_ID = [
+        5104841245755180586,  # 🔥
+      #  5107584321108051014,  # 👍
+        5159385139981059251,  # ❤️
+        5046509860389126442   # 🎉
+    ]
+    return random.choice(EFFECT_ID)
 
 
 
